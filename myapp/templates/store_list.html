@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load store_tags %}
+{% block title %}IMSUK - Store List{% endblock %}
+{% block content %}
+<style>
+    .badge-discount { background-color: #FF69B4; color: white; font-weight: bold; }
+    .card-title { font-weight: bold; }
+    .additional-details { font-size: 0.9em; color: #3F8240; }
+    .original-price { font-size: 0.8em; color: #6c757d; text-decoration: line-through; }
+    .opening-hours { font-size: 0.9em; color: #3F8240; }
+    .clock-icon { margin-right: 5px; color: #3F8240; }
+</style>
+
+<div class="mission-statement mb-4">
+    <h2>Discover Sustainable Stores</h2>
+    <p>Shop for food from stores that reduce food waste and care for the planet with IMSUK</p>
+</div>
+
+<!-- Search Form -->
+<form method="get" class="search-form mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+            <label for="search" class="form-label">Search Stores or Menus</label>
+            <div class="search-input-group">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="form-control" name="search" id="search" value="{{ search_query }}" placeholder="e.g., Pizza, Sushi, or Store Name">
+            </div>
+        </div>
+        <div class="col-md-3 offset-md-3">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+    </div>
+</form>
+
+<!-- Store List -->
+<div class="row">
+    {% for store in stores %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
+                {% if store.store_image %}
+                <img src="{{ store.store_image.url }}" class="card-img-top" alt="{{ store.name }}" aria-describedby="store-name-{{ store.id }}">
+                {% else %}
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Store image not available">
+                {% endif %}
+            </a>
+            <div class="card-body">
+                <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
+                    <h5 class="card-title" id="store-name-{{ store.id }}">{{ store.name }}</h5>
+                    {% if store.additional_details %}
+                    <p class="additional-details">{{ store.additional_details|truncatechars:50 }}</p>
+                    {% endif %}
+                </a>
+                <p class="card-text">
+                    {% if store.discount_percentage and store.discount_percentage > 0 %}
+                    <span class="badge badge-discount">-{{ store.discount_percentage|floatformat:0 }}%</span>
+                    <strong>{{ store.discounted_price|floatformat:0 }} บาท</strong>
+                    <span class="original-price">{{ store.price|floatformat:0 }} บาท</span>
+                    {% else %}
+                    <strong>{{ store.price|floatformat:0 }} บาท</strong>
+                    {% endif %}
+                </p>
+                <p class="opening-hours">
+                    <i class="fas fa-clock clock-icon"></i>
+                    {{ store.available_from|time:"H:i" }} - {{ store.available_until|time:"H:i" }}
+                </p>
+                <!-- Add to Cart Form -->
+                <form method="post" class="d-flex align-items-center add-to-cart-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="store_id" value="{{ store.id }}">
+                    <input type="number" name="quantity" value="1" min="0" class="form-control quantity-input" aria-label="Quantity" style="width: 80px;">
+                    <button type="submit" class="btn btn-cart ms-2">Add to Cart</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <p>No stores are currently available. Check back later!</p>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Messages -->
+{% if messages %}
+<div class="mt-3">
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    // Prevent redirect to Detail page when clicking quantity input
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        input.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        input.addEventListener('change', function(e) {
+            e.stopPropagation();
+        });
+    });
+    document.querySelectorAll('.add-to-cart-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch("{% url 'store_list' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
