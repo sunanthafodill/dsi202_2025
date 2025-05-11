@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}IMSUK - Shopping Cart{% endblock %}
+{% block content %}
+<style>
+    .cart-table { background-color: #F7EFDB; }
+    .cart-table th, .cart-table td { vertical-align: middle; }
+    .store-name { font-weight: bold; color: #3F8240; }
+    .btn-update { background-color: #BADE80; color: #3F8240; }
+    .btn-update:hover { background-color: #A8C66B; }
+    .btn-remove { background-color: #dc3545; color: white; }
+    .btn-checkout { background-color: #3F8240; color: white; font-weight: bold; }
+    .btn-checkout:hover { background-color: #2E5E2F; }
+    .total-price { font-size: 1.2em; color: #3F8240; }
+    .btn-quantity { background-color: #BADE80; color: #3F8240; font-weight: bold; width: 30px; height: 30px; padding: 0; }
+    .btn-quantity:hover { background-color: #A8C66B; }
+    .quantity-input { width: 60px; text-align: center; pointer-events: none; }
+    .allergy-warning { color: #dc3545; font-size: 0.9em; }
+</style>
+
+<div class="container mt-4">
+    <h1 class="mb-4" style="color: #3F8240;">Your Shopping Cart</h1>
+    {% if cart_items %}
+    <table class="table cart-table">
+        <thead>
+            <tr>
+                <th>Store</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in cart_items %}
+            <tr>
+                <td class="store-name">{{ item.store.name }}</td>
+                <td>
+                    {% if item.store.discount_percentage and item.store.discount_percentage > 0 %}
+                    {{ item.store.discounted_price|floatformat:0 }} บาท
+                    {% else %}
+                    {{ item.store.price|floatformat:0 }} บาท
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="post" class="update-cart-form d-flex align-items-center">
+                        {% csrf_token %}
+                        <input type="hidden" name="store_id" value="{{ item.store.id }}">
+                        <button type="button" class="btn btn-quantity me-2" onclick="updateQuantity(this, -1, {{ item.store.quantity_available|default:9999 }})">-</button>
+                        <input type="number" name="quantity" value="{{ item.quantity }}" min="0" max="{{ item.store.quantity_available|default:9999 }}" class="form-control quantity-input">
+                        <button type="button" class="btn btn-quantity ms-2" onclick="updateQuantity(this, 1, {{ item.store.quantity_available|default:9999 }})">+</button>
+                    </form>
+                </td>
+                <td>
+                    {% if item.store.discount_percentage and item.store.discount_percentage > 0 %}
+                    {{ item.total_discounted_price|floatformat:0 }} บาท
+                    {% else %}
+                    {{ item.total_price|floatformat:0 }} บาท
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="post" class="remove-cart-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="store_id" value="{{ item.store.id }}">
+                        <input type="hidden" name="quantity" value="0">
+                        <button type="submit" class="btn btn-remove btn-sm">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% if user.is_authenticated and item.allergens %}
+            {% for allergen in item.allergens %}
+            {% for allergy in user.allergies.all %}
+            {% if allergen == allergy.name %}
+            <tr>
+                <td colspan="5" class="allergy-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Warning: {{ item.store.name }} contains {{ allergen }} which you are allergic to.
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            {% endfor %}
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <p class="total-price"><strong>Total:</strong> {{ total_price|floatformat:0 }} บาท</p>
+        <div>
+            <form method="post" class="clear-cart-form d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="clear_cart" value="true">
+                <button type="submit" class="btn btn-remove me-2">Clear Cart</button>
+            </form>
+            <a href="{% url 'checkout' %}" class="btn btn-checkout">Proceed to Checkout</a>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-center">Your cart is empty. <a href="{% url 'store_list' %}" style="color: #3F8240;">Start shopping now!</a></p>
+    {% endif %}
+</div>
+
+<!-- Messages -->
+{% if messages %}
+<div class="container Plants & Pots">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    function updateQuantity(button, change, max) {
+        const form = button.closest('form');
+        const input = form.querySelector('.quantity-input');
+        let newValue = parseInt(input.value) + change;
+        if (newValue < 0) newValue = 0;
+        if (newValue > max) newValue = max;
+        input.value = newValue;
+        
+        console.log('Sending quantity:', newValue, 'for store_id:', form.querySelector('[name=store_id]').value);
+        
+        // ส่งฟอร์ม
+        const formData = new FormData(form);
+        fetch("{% url 'cart' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => { throw new Error(`HTTP error ${response.status}: ${text}`); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                window.location.reload();
+            } else {
+                showError(data.message || 'Failed to update quantity.');
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showError('Failed to update quantity. Please try again.');
+        });
+    }
+
+    function showError(message) {
+        const alertContainer = document.querySelector('.container.mt-3') || document.createElement('div');
+        if (!alertContainer.classList.contains('container')) {
+            alertContainer.className = 'container mt-3';
+            document.querySelector('.container.mt-4').after(alertContainer);
+        }
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+        alertContainer.prepend(alert);
+        setTimeout(() => alert.classList.remove('show'), 3000);
+        setTimeout(() => alert.remove(), 3500);
+    }
+
+    document.querySelectorAll('.remove-cart-form, .clear-cart-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch("{% url 'cart' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    showError(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to process request. Please try again.');
+            });
+        });
+    });
+</script>
+{% endblock %}
