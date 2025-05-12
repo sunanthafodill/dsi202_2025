@@ -18,48 +18,6 @@ def home(request):
     }
     return render(request, 'home.html', context)
 
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('home')
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            messages.success(request, "ล็อกอินสำเร็จ!")
-            next_url = request.POST.get('next', 'home')
-            return redirect(next_url)
-        else:
-            messages.error(request, "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
-    
-    return render(request, 'login.html', {'next': request.GET.get('next', '')})
-
-def register_view(request):
-    if request.user.is_authenticated:
-        return redirect('home')
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
-        
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "ชื่อผู้ใช้นี้มีอยู่แล้ว")
-        elif User.objects.filter(email=email).exists():
-            messages.error(request, "อีเมลนี้มีอยู่แล้ว")
-        elif password1 != password2:
-            messages.error(request, "รหัสผ่านไม่ตรงกัน")
-        else:
-            user = User.objects.create_user(username=username, email=email, password=password1)
-            user.save()
-            login(request, user)
-            messages.success(request, "สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ")
-            return redirect('home')
-    
-    return render(request, 'register.html')
 
 class StoreListView(ListView):
     model = Store

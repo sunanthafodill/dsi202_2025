@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+{% block title %}IMSUK - สมัครสมาชิก{% endblock %}
+{% block content %}
+<div class="container my-5 animate__animated animate__fadeIn">
+    <h1 class="text-center mb-4" style="color: var(--imsuk-primary);">สมัครสมาชิก</h1>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm animate__animated animate__fadeInUp">
+                <form method="post" action="{% url 'account_signup' %}">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger animate__animated animate__shakeX">
+                        <ul class="mb-0">
+                            {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                            {% for field in form %}
+                            {% for error in field.errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">ชื่อผู้ใช้</label>
+                        <input type="text" name="username" id="id_username" class="form-control" required placeholder="กรอกชื่อผู้ใช้">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">อีเมล</label>
+                        <input type="email" name="email" id="id_email" class="form-control" required placeholder="กรอกอีเมล">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">รหัสผ่าน</label>
+                        <input type="password" name="password1" id="id_password1" class="form-control" required placeholder="กรอกรหัสผ่าน">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password2" class="form-label">ยืนยันรหัสผ่าน</label>
+                        <input type="password" name="password2" id="id_password2" class="form-control" required placeholder="ยืนยันรหัสผ่าน">
+                    </div>
+                    <input type="hidden" name="next" value="{{ next|default:'home' }}">
+                    <button type="submit" class="btn btn-imsuk w-100">สมัครสมาชิก</button>
+                </form>
+                <hr>
+                <p class="text-center">หรือสมัครสมาชิกด้วย</p>
+                <a href="{% provider_login_url 'google' %}" class="btn btn-outline-imsuk w-100">
+                    <i class="fab fa-google me-2"></i> สมัครด้วย Google
+                </a>
+                <p class="text-center mt-3">
+                    มีบัญชีอยู่แล้ว? <a href="{% url 'account_login' %}">เข้าสู่ระบบ</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

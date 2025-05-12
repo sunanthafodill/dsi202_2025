@@ -27,6 +27,8 @@ services:
       - POSTGRES_USER=django_user
       - POSTGRES_PASSWORD=django_pass
       - POSTGRES_HOST=db
+    env_file:
+      - .env
     depends_on:
       - db
     command: /bin/bash /usr/src/app/entrypoint.sh

@@ -3,30 +3,30 @@
 {% block title %}IMSUK - หน้าแรก{% endblock %}
 {% block content %}
 <!-- Welcome Section -->
-<div class="welcome-section text-center my-5">
-    <h1 class="display-4">{{ welcome_message }}</h1>
-    <p class="lead">{{ mission_statement }}</p>
-    <div class="mission-statement mb-4">
+<div class="welcome-section text-center my-5 animate__animated animate__fadeIn">
+    <h1 class="display-4 text-success">{{ welcome_message }}</h1>
+    <p class="lead text-muted">{{ mission_statement }}</p>
+    <div class="mission-statement mb-4 animate__animated animate__fadeInUp">
         <h3>ภารกิจของเรา</h3>
         <p>IMSUK เชื่อมโยงคุณกับร้านค้าที่ช่วยลดขยะอาหาร ด้วยการนำเสนออาหารส่วนเกินในราคาพิเศษ พร้อมสร้างโลกที่ยั่งยืนสำหรับทุกคน</p>
     </div>
-    <a href="{% url 'store_list' %}" class="btn btn-imsuk btn-lg">สำรวจร้านค้าที่ยั่งยืน</a>
+    <a href="{% url 'store_list' %}" class="btn btn-imsuk btn-lg animate__animated animate__pulse animate__infinite">สำรวจร้านค้าที่ยั่งยืน</a>
 </div>
 
 <!-- Banner Section -->
-<div class="banner-section text-center mb-5">
-    <img src="{% static 'images/imsuk_banner.jpg' %}" class="img-fluid rounded" alt="ภารกิจ IMSUK" onerror="this.src='https://via.placeholder.com/1200x400?text=IMSUK+Sustainable+Living'">
+<div class="banner-section text-center mb-5 animate__animated animate__zoomIn">
+    <img src="{% static 'images/imsuk_banner.jpg' %}" class="img-fluid rounded shadow-sm" alt="ภารกิจ IMSUK" onerror="this.src='{% static 'images/placeholder_banner.jpg' %}'">
 </div>
 
 <!-- Call to Action -->
-<div class="cta-section text-center">
-    <h3>ร่วมเปลี่ยนโลกกับเรา</h3>
-    <p>ทุกการซื้อของคุณช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น</p>
+<div class="cta-section text-center py-5 bg-light rounded animate__animated animate__fadeInUp">
+    <h3 class="text-success">ร่วมเปลี่ยนโลกกับเรา</h3>
+    <p class="text-muted">ทุกการซื้อของคุณช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น</p>
     {% if user.is_authenticated %}
-        <a href="{% url 'store_list' %}" class="btn btn-imsuk">เริ่มต้นเลย</a>
+        <a href="{% url 'store_list' %}" class="btn btn-imsuk m-2">เริ่มต้นเลย</a>
     {% else %}
-        <a href="{% url 'register' %}" class="btn btn-imsuk">สมัครเลย</a>
-        <a href="{% url 'login' %}" class="btn btn-imsuk">เข้าสู่ระบบ</a>
+        <a href="{% url 'account_signup' %}" class="btn btn-imsuk m-2">สมัครเลย</a>
+        <a href="{% url 'account_login' %}" class="btn btn-imsuk m-2">เข้าสู่ระบบ</a>
     {% endif %}
 </div>
 {% endblock %}

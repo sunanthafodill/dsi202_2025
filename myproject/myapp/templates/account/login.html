@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+{% block title %}IMSUK - เข้าสู่ระบบ{% endblock %}
+{% block content %}
+<div class="container my-5 animate__animated animate__fadeIn">
+    <h1 class="text-center mb-4" style="color: var(--imsuk-primary);">เข้าสู่ระบบ</h1>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm animate__animated animate__fadeInUp">
+                <form method="post" action="{% url 'account_login' %}">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger animate__animated animate__shakeX">
+                        <ul class="mb-0">
+                            {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                            {% for field in form %}
+                            {% for error in field.errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label for="id_login" class="form-label">ชื่อผู้ใช้หรืออีเมล</label>
+                        <input type="text" name="login" id="id_login" class="form-control" required placeholder="กรอกชื่อผู้ใช้หรืออีเมล">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">รหัสผ่าน</label>
+                        <input type="password" name="password" id="id_password" class="form-control" required placeholder="กรอกรหัสผ่าน">
+                    </div>
+                    <input type="hidden" name="next" value="{{ next|default:'home' }}">
+                    <button type="submit" class="btn btn-imsuk w-100">เข้าสู่ระบบ</button>
+                </form>
+                <hr>
+                <p class="text-center">หรือเข้าสู่ระบบด้วย</p>
+                <a href="{% provider_login_url 'google' %}" class="btn btn-outline-imsuk w-100">
+                    <i class="fab fa-google me-2"></i> ล็อกอินด้วย Google
+                </a>
+                <p class="text-center mt-3">
+                    ยังไม่มีบัญชี? <a href="{% url 'account_signup' %}">สมัครสมาชิก</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

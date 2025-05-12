@@ -340,3 +340,59 @@ h1, h2, h3, h4, h5, h6 {
         font-size: 0.9rem;
     }
 }
+/* เพิ่มสไตล์สำหรับ .btn-imsuk-nav */
+.btn-imsuk-nav {
+    background-color: transparent;
+    border: 1px solid var(--imsuk-secondary);
+    color: var(--imsuk-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.btn-imsuk-nav:hover {
+    background-color: var(--imsuk-secondary);
+    color: var(--imsuk-primary);
+}
+
+/* เพิ่มสไตล์สำหรับ .bg-imsuk */
+.bg-imsuk {
+    background-color: var(--imsuk-secondary) !important;
+    color: var(--imsuk-primary) !important;
+}
+
+/* ปรับปรุง alert เพื่อให้สอดคล้องกับ IMSUK */
+.alert-success {
+    background-color: var(--imsuk-secondary);
+    color: var(--imsuk-primary);
+    border-color: var(--imsuk-primary);
+}
+
+.alert-danger {
+    background-color: var(--imsuk-accent);
+    color: white;
+    border-color: var(--imsuk-accent);
+}
+
+/* ปรับแต่ง Modal */
+.modal-content {
+    border: 2px solid var(--imsuk-secondary);
+    border-radius: 10px;
+}
+
+/* ปรับแต่งฟอร์ม */
+.form-control {
+    border: 1px solid var(--imsuk-secondary);
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--imsuk-primary);
+    box-shadow: 0 0 0 0.2rem rgba(63, 130, 64, 0.25);
+}
+
+.form-label {
+    color: var(--imsuk-primary);
+    font-weight: 500;
+}
