@@ -9,3 +9,6 @@ jupyterlab==4.0.2
 # tailwindcss, whitenoise, or anything else you use in your project
 
 Pillow
+django-allauth
+PyJWT
+cryptography

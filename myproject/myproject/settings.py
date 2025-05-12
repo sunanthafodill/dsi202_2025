@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,6 +43,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'myapp',
     'django_extensions',
+    # Django-Allauth
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +59,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # เพิ่ม middleware สำหรับ allauth
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'
@@ -129,3 +141,38 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 STATICFILES_DIRS = [BASE_DIR / "myapp/static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',  # สำหรับล็อกอินด้วย username/password
+    'allauth.account.auth_backends.AuthenticationBackend',  # สำหรับ allauth
+]
+
+# การตั้งค่า Django-Allauth
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'  # อนุญาตให้ล็อกอินด้วย username หรือ email
+ACCOUNT_EMAIL_REQUIRED = True  # ต้องกรอกอีเมล
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # การยืนยันอีเมลเป็นทางเลือก (เปลี่ยนเป็น 'mandatory' ถ้าต้องการบังคับ)
+ACCOUNT_USERNAME_REQUIRED = True  # ต้องมี username
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True  # ต้องกรอกรหัสผ่านสองครั้งเมื่อสมัคร
+LOGIN_REDIRECT_URL = 'home'  # เปลี่ยนเส้นทางไปยังหน้า home หลังล็อกอิน
+LOGOUT_REDIRECT_URL = 'home'  # เปลี่ยนเส้นทางไปยังหน้า home หลังล็อกเอาท์
+ACCOUNT_LOGOUT_ON_GET = True  # ล็อกเอาท์ทันทีเมื่อเรียก GET request
+SOCIALACCOUNT_LOGIN_ON_GET = True  # ล็อกอินโซเชียลทันทีเมื่อเรียก GET request
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': os.getenv("GOOGLE_CLIENT_ID"),
+            'secret': os.getenv("GOOGLE_CLIENT_SECRET"),
+            'key': ''
+        }
+    }
+}
