@@ -5,7 +5,7 @@
 <div class="container my-5">
     <!-- Toast Container -->
     <div class="toast-container position-fixed top-0 end-0 p-3">
-        <div id="cartToast" class="toast align-items-center text-white bg-imsuk border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="cartToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body"></div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -39,7 +39,7 @@
     <div class="row g-4">
         {% for store in stores %}
         <div class="col-md-4 mb-4">
-            <div class="store-card card h-100 shadow-sm animate__animated animate__fadeIn" role="region" aria-labelledby="store-name-{{ store.id }}">
+            <div class="store-card card h-100 shadow-sm" role="region" aria-labelledby="store-name-{{ store.id }}">
                 <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
                     {% if store.store_image %}
                     <img src="{{ store.store_image.url }}" class="card-img-top store-image" alt="{{ store.name }}" loading="lazy" aria-describedby="store-name-{{ store.id }}">
@@ -71,7 +71,7 @@
                     <form method="post" class="d-flex align-items-center add-to-cart-form" data-store-id="{{ store.id }}">
                         {% csrf_token %}
                         <input type="hidden" name="store_id" value="{{ store.id }}">
-                        <input type="hidden" name="quantity" value="1" class="quantity-hidden">
+                        <input type="hidden" name="quantity" value="1" class="quantity-hidden" max="{{ store.quantity_available|default:9999 }}">
                         <div class="cart-controls" data-added="false">
                             <button type="submit" class="btn btn-imsuk add-to-cart-btn" aria-label="เพิ่มลงตะกร้า">
                                 <i class="fas fa-cart-plus me-2"></i>เพิ่มลงตะกร้า
@@ -124,87 +124,107 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const forms = document.querySelectorAll('.add-to-cart-form');
-        const toastEl = document.getElementById('cartToast');
-        const toast = new bootstrap.Toast(toastEl);
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('.add-to-cart-form');
+    const toastEl = document.getElementById('cartToast');
+    const toast = new bootstrap.Toast(toastEl);
+    const isAuthenticated = {{ is_authenticated|yesno:"true,false" }};
 
-        forms.forEach(form => {
-            const addToCartBtn = form.querySelector('.add-to-cart-btn');
-            const cartControls = form.querySelector('.cart-controls');
-            const quantityHidden = form.querySelector('.quantity-hidden');
+    forms.forEach(form => {
+        const addToCartBtn = form.querySelector('.add-to-cart-btn');
+        const cartControls = form.querySelector('.cart-controls');
+        const quantityHidden = form.querySelector('.quantity-hidden');
 
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                addToCartBtn.disabled = true;
-                addToCartBtn.textContent = 'กำลังเพิ่ม...';
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
 
-                const formData = new FormData(this);
-                fetch("{% url 'store_list' %}", {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'X-Requested-With': 'XMLHttpRequest'
+            if (!isAuthenticated) {
+                // Show auth modal from base.html
+                const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+                authModal.show();
+                toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกเพื่อเพิ่มสินค้าลงตะกร้า';
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add('bg-warning');
+                toast.show();
+                return;
+            }
+
+            addToCartBtn.disabled = true;
+            addToCartBtn.textContent = 'กำลังเพิ่ม...';
+
+            const formData = new FormData(this);
+            fetch("{% url 'add_to_cart' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                toastEl.querySelector('.toast-body').textContent = data.message;
+                toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
+                toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
+                toast.show();
+
+                if (data.success) {
+                    // Update cart badge
+                    const badge = document.querySelector('.cart-badge');
+                    if (badge && data.cart_count !== undefined) {
+                        badge.textContent = data.cart_count;
+                        badge.style.display = 'inline-block';
                     }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    toastEl.querySelector('.toast-body').textContent = data.message;
-                    toastEl.classList.remove('bg-danger', 'bg-success');
-                    toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
-                    toast.show();
 
-                    if (data.success) {
-                        // Update cart badge
-                        const badge = document.querySelector('.cart-badge');
-                        if (badge) {
-                            badge.textContent = parseInt(badge.textContent || 0) + parseInt(quantityHidden.value);
+                    // Switch to quantity controls
+                    cartControls.setAttribute('data-added', 'true');
+                    const maxQuantity = quantityHidden.getAttribute('max') || 9999;
+                    cartControls.innerHTML = `
+                        <button type="button" class="btn btn-outline-imsuk decrease-quantity" aria-label="ลดจำนวน">-</button>
+                        <input type="number" name="quantity" value="${quantityHidden.value}" min="1" max="${maxQuantity}" class="quantity-input mx-2" aria-label="จำนวน" readonly>
+                        <button type="button" class="btn btn-outline-imsuk increase-quantity" aria-label="เพิ่มจำนวน">+</button>
+                        <button type="submit" class="btn btn-imsuk ms-3 add-to-cart-btn" aria-label="อัปเดตตะกร้า">อัปเดต</button>
+                    `;
+
+                    // Add event listeners for quantity buttons
+                    const newQuantityInput = cartControls.querySelector('.quantity-input');
+                    cartControls.querySelector('.increase-quantity').addEventListener('click', () => {
+                        let quantity = parseInt(newQuantityInput.value);
+                        const max = parseInt(newQuantityInput.getAttribute('max'));
+                        if (quantity < max) {
+                            newQuantityInput.value = quantity + 1;
+                            quantityHidden.value = newQuantityInput.value;
                         }
-
-                        // Switch to quantity controls
-                        cartControls.setAttribute('data-added', 'true');
-                        cartControls.innerHTML = `
-                            <button type="button" class="btn btn-outline-imsuk decrease-quantity" aria-label="ลดจำนวน">-</button>
-                            <input type="number" name="quantity" value="${quantityHidden.value}" min="1" max="${form.querySelector('.quantity-hidden').getAttribute('max') || 9999}" class="quantity-input mx-2" aria-label="จำนวน" readonly>
-                            <button type="button" class="btn btn-outline-imsuk increase-quantity" aria-label="เพิ่มจำนวน">+</button>
-                            <button type="submit" class="btn btn-imsuk ms-3 add-to-cart-btn" aria-label="อัปเดตตะกร้า">อัปเดต</button>
-                        `;
-
-                        // Add event listeners for new quantity buttons
-                        const newQuantityInput = cartControls.querySelector('.quantity-input');
-                        cartControls.querySelector('.increase-quantity').addEventListener('click', () => {
-                            let quantity = parseInt(newQuantityInput.value);
-                            const max = parseInt(newQuantityInput.getAttribute('max'));
-                            if (quantity < max) {
-                                newQuantityInput.value = quantity + 1;
-                                quantityHidden.value = newQuantityInput.value;
-                            }
-                        });
-                        cartControls.querySelector('.decrease-quantity').addEventListener('click', () => {
-                            let quantity = parseInt(newQuantityInput.value);
-                            if (quantity > 1) {
-                                newQuantityInput.value = quantity - 1;
-                                quantityHidden.value = newQuantityInput.value;
-                            }
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
-                    toastEl.classList.remove('bg-danger', 'bg-success');
-                    toastEl.classList.add('bg-danger');
-                    toast.show();
-                })
-                .finally(() => {
-                    addToCartBtn.disabled = false;
-                    if (cartControls.getAttribute('data-added') !== 'true') {
-                        addToCartBtn.textContent = 'เพิ่มลงตะกร้า';
-                    }
-                });
+                    });
+                    cartControls.querySelector('.decrease-quantity').addEventListener('click', () => {
+                        let quantity = parseInt(newQuantityInput.value);
+                        if (quantity > 1) {
+                            newQuantityInput.value = quantity - 1;
+                            quantityHidden.value = newQuantityInput.value;
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error adding to cart:', error);
+                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการเพิ่มลงตะกร้า กรุณาลองใหม่';
+                toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
+                toastEl.classList.add('bg-danger');
+                toast.show();
+            })
+            .finally(() => {
+                addToCartBtn.disabled = false;
+                if (cartControls.getAttribute('data-added') !== 'true') {
+                    addToCartBtn.textContent = 'เพิ่มลงตะกร้า';
+                }
             });
         });
     });
+});
 </script>
 {% endblock %}

@@ -121,11 +121,10 @@ h1, h2, h3, h4, h5, h6 {
     width: 100%;
     max-height: 400px;
     object-fit: cover;
-    transition: transform 0.3s ease;
 }
 
 .store-image:hover {
-    transform: scale(1.05);
+    /* ลบ transform เพื่อปิดการขยายเมื่อ hover */
 }
 
 .additional-images {
