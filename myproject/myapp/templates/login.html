@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}IMSUK - Login{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="auth-card">
+        <h1 class="auth-title">เข้าสู่ระบบ</h1>
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        <form method="post" class="login-form">
+            {% csrf_token %}
+            <div class="mb-3">
+                <input type="text" name="username" class="form-control" placeholder="ชื่อผู้ใช้" required>
+            </div>
+            <div class="mb-3">
+                <input type="password" name="password" class="form-control" placeholder="รหัสผ่าน" required>
+            </div>
+            <button type="submit" class="btn btn-auth">เข้าสู่ระบบ</button>
+        </form>
+        <div class="text-center mt-3">
+            <p>ยังไม่มีบัญชี? <a href="{% url 'register' %}" class="auth-link">สมัครสมาชิก</a></p>
+            <p><a href="#" class="auth-link">ลืมรหัสผ่าน?</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

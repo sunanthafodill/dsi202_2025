@@ -1,147 +1,208 @@
 {% extends 'base.html' %}
-{% load store_tags %}
+{% load static store_tags %}
 {% block title %}IMSUK - Store List{% endblock %}
 {% block content %}
-<style>
-    .badge-discount { background-color: #FF69B4; color: white; font-weight: bold; }
-    .card-title { font-weight: bold; }
-    .additional-details { font-size: 0.9em; color: #3F8240; }
-    .original-price { font-size: 0.8em; color: #6c757d; text-decoration: line-through; }
-    .opening-hours { font-size: 0.9em; color: #3F8240; }
-    .clock-icon { margin-right: 5px; color: #3F8240; }
-</style>
-
-<div class="mission-statement mb-4">
-    <h2>Discover Sustainable Stores</h2>
-    <p>Shop for food from stores that reduce food waste and care for the planet with IMSUK</p>
-</div>
-
-<!-- Search Form -->
-<form method="get" class="search-form mb-4">
-    <div class="row g-3 align-items-end">
-        <div class="col-md-6">
-            <label for="search" class="form-label">Search Stores or Menus</label>
-            <div class="search-input-group">
-                <span class="search-icon">🔍</span>
-                <input type="text" class="form-control" name="search" id="search" value="{{ search_query }}" placeholder="e.g., Pizza, Sushi, or Store Name">
+<div class="container my-5">
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="cartToast" class="toast align-items-center text-white bg-imsuk border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
-        <div class="col-md-3 offset-md-3">
-            <button type="submit" class="btn btn-primary w-100">Search</button>
-        </div>
     </div>
-</form>
 
-<!-- Store List -->
-<div class="row">
-    {% for store in stores %}
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
-                {% if store.store_image %}
-                <img src="{{ store.store_image.url }}" class="card-img-top" alt="{{ store.name }}" aria-describedby="store-name-{{ store.id }}">
-                {% else %}
-                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Store image not available">
-                {% endif %}
-            </a>
-            <div class="card-body">
+    <!-- Mission Statement -->
+    <div class="mission-statement mb-4 text-center">
+        <h2 class="text-success">Discover Sustainable Stores</h2>
+        <p class="text-muted">Shop for food from stores that reduce food waste and care for the planet with IMSUK</p>
+    </div>
+
+    <!-- Search Form -->
+    <form method="get" class="search-form mb-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="search" class="form-label">ค้นหาร้านค้าหรือเมนู</label>
+                <div class="search-input-group position-relative">
+                    <span class="search-icon position-absolute top-50 translate-middle-y ms-3">🔍</span>
+                    <input type="text" class="form-control ps-5" name="search" id="search" value="{{ search_query }}" placeholder="เช่น พิซซ่า, ซูชิ, หรือชื่อร้าน" aria-label="ค้นหาร้านค้าหรือเมนู">
+                </div>
+            </div>
+            <div class="col-md-3 offset-md-3">
+                <button type="submit" class="btn btn-imsuk w-100" aria-label="ค้นหา">ค้นหา</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Store List -->
+    <div class="row g-4">
+        {% for store in stores %}
+        <div class="col-md-4 mb-4">
+            <div class="store-card card h-100 shadow-sm animate__animated animate__fadeIn" role="region" aria-labelledby="store-name-{{ store.id }}">
                 <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
-                    <h5 class="card-title" id="store-name-{{ store.id }}">{{ store.name }}</h5>
-                    {% if store.additional_details %}
-                    <p class="additional-details">{{ store.additional_details|truncatechars:50 }}</p>
+                    {% if store.store_image %}
+                    <img src="{{ store.store_image.url }}" class="card-img-top store-image" alt="{{ store.name }}" loading="lazy" aria-describedby="store-name-{{ store.id }}">
+                    {% else %}
+                    <img src="https://via.placeholder.com/300x200" class="card-img-top store-image" alt="ไม่มีรูปภาพร้านค้า" loading="lazy">
                     {% endif %}
                 </a>
-                <p class="card-text">
-                    {% if store.discount_percentage and store.discount_percentage > 0 %}
-                    <span class="badge badge-discount">-{{ store.discount_percentage|floatformat:0 }}%</span>
-                    <strong>{{ store.discounted_price|floatformat:0 }} บาท</strong>
-                    <span class="original-price">{{ store.price|floatformat:0 }} บาท</span>
-                    {% else %}
-                    <strong>{{ store.price|floatformat:0 }} บาท</strong>
-                    {% endif %}
-                </p>
-                <p class="opening-hours">
-                    <i class="fas fa-clock clock-icon"></i>
-                    {{ store.available_from|time:"H:i" }} - {{ store.available_until|time:"H:i" }}
-                </p>
-                <!-- Add to Cart Form -->
-                <form method="post" class="d-flex align-items-center add-to-cart-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="store_id" value="{{ store.id }}">
-                    <input type="number" name="quantity" value="1" min="0" class="form-control quantity-input" aria-label="Quantity" style="width: 80px;">
-                    <button type="submit" class="btn btn-cart ms-2">Add to Cart</button>
-                </form>
+                <div class="card-body">
+                    <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
+                        <h5 class="card-title" id="store-name-{{ store.id }}">{{ store.name }}</h5>
+                        {% if store.additional_details %}
+                        <p class="additional-details">{{ store.additional_details|truncatechars:80 }}</p>
+                        {% endif %}
+                    </a>
+                    <div class="price-section mb-2">
+                        {% if store.discount_percentage and store.discount_percentage > 0 %}
+                        <span class="badge badge-discount me-2">-{{ store.discount_percentage|floatformat:0 }}%</span>
+                        <span class="discounted-price">{{ store.discounted_price|floatformat:0 }} บาท</span>
+                        <span class="original-price ms-2">{{ store.price|floatformat:0 }} บาท</span>
+                        {% else %}
+                        <span class="discounted-price">{{ store.price|floatformat:0 }} บาท</span>
+                        {% endif %}
+                    </div>
+                    <p class="opening-hours">
+                        <i class="fas fa-clock clock-icon"></i>
+                        {{ store.available_from|time:"H:i" }} - {{ store.available_until|time:"H:i" }}
+                    </p>
+                    <!-- Add to Cart Form -->
+                    <form method="post" class="d-flex align-items-center add-to-cart-form" data-store-id="{{ store.id }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="store_id" value="{{ store.id }}">
+                        <input type="hidden" name="quantity" value="1" class="quantity-hidden">
+                        <div class="cart-controls" data-added="false">
+                            <button type="submit" class="btn btn-imsuk add-to-cart-btn" aria-label="เพิ่มลงตะกร้า">
+                                <i class="fas fa-cart-plus me-2"></i>เพิ่มลงตะกร้า
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
-    {% empty %}
-    <p>No stores are currently available. Check back later!</p>
-    {% endfor %}
-</div>
-
-<!-- Pagination -->
-{% if is_paginated %}
-<nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Previous</a>
-        </li>
-        {% endif %}
-        {% for num in page_obj.paginator.page_range %}
-        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">{{ num }}</a>
-        </li>
+        {% empty %}
+        <div class="col-12 text-center">
+            <p class="text-muted">ไม่มีร้านค้าที่ตรงกับการค้นหา กรุณาลองใหม่!</p>
+        </div>
         {% endfor %}
-        {% if page_obj.has_next %}
-        <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">Next</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
-
-<!-- Messages -->
-{% if messages %}
-<div class="mt-3">
-    {% for message in messages %}
-    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
-        {{ message }}
     </div>
-    {% endfor %}
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="การนำทางหน้า">
+        <ul class="pagination justify-content-center mt-4">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" aria-label="หน้าก่อนหน้า">ก่อนหน้า</a>
+            </li>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" aria-label="หน้าถัดไป">ถัดไป</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mt-3">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
-{% endif %}
 
 <script>
-    // Prevent redirect to Detail page when clicking quantity input
-    document.querySelectorAll('.quantity-input').forEach(input => {
-        input.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        input.addEventListener('change', function(e) {
-            e.stopPropagation();
-        });
-    });
-    document.querySelectorAll('.add-to-cart-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            fetch("{% url 'store_list' %}", {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    window.location.reload();
-                } else {
-                    alert(data.message);
-                }
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('.add-to-cart-form');
+        const toastEl = document.getElementById('cartToast');
+        const toast = new bootstrap.Toast(toastEl);
+
+        forms.forEach(form => {
+            const addToCartBtn = form.querySelector('.add-to-cart-btn');
+            const cartControls = form.querySelector('.cart-controls');
+            const quantityHidden = form.querySelector('.quantity-hidden');
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addToCartBtn.disabled = true;
+                addToCartBtn.textContent = 'กำลังเพิ่ม...';
+
+                const formData = new FormData(this);
+                fetch("{% url 'store_list' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    toastEl.querySelector('.toast-body').textContent = data.message;
+                    toastEl.classList.remove('bg-danger', 'bg-success');
+                    toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
+                    toast.show();
+
+                    if (data.success) {
+                        // Update cart badge
+                        const badge = document.querySelector('.cart-badge');
+                        if (badge) {
+                            badge.textContent = parseInt(badge.textContent || 0) + parseInt(quantityHidden.value);
+                        }
+
+                        // Switch to quantity controls
+                        cartControls.setAttribute('data-added', 'true');
+                        cartControls.innerHTML = `
+                            <button type="button" class="btn btn-outline-imsuk decrease-quantity" aria-label="ลดจำนวน">-</button>
+                            <input type="number" name="quantity" value="${quantityHidden.value}" min="1" max="${form.querySelector('.quantity-hidden').getAttribute('max') || 9999}" class="quantity-input mx-2" aria-label="จำนวน" readonly>
+                            <button type="button" class="btn btn-outline-imsuk increase-quantity" aria-label="เพิ่มจำนวน">+</button>
+                            <button type="submit" class="btn btn-imsuk ms-3 add-to-cart-btn" aria-label="อัปเดตตะกร้า">อัปเดต</button>
+                        `;
+
+                        // Add event listeners for new quantity buttons
+                        const newQuantityInput = cartControls.querySelector('.quantity-input');
+                        cartControls.querySelector('.increase-quantity').addEventListener('click', () => {
+                            let quantity = parseInt(newQuantityInput.value);
+                            const max = parseInt(newQuantityInput.getAttribute('max'));
+                            if (quantity < max) {
+                                newQuantityInput.value = quantity + 1;
+                                quantityHidden.value = newQuantityInput.value;
+                            }
+                        });
+                        cartControls.querySelector('.decrease-quantity').addEventListener('click', () => {
+                            let quantity = parseInt(newQuantityInput.value);
+                            if (quantity > 1) {
+                                newQuantityInput.value = quantity - 1;
+                                quantityHidden.value = newQuantityInput.value;
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                    toastEl.classList.remove('bg-danger', 'bg-success');
+                    toastEl.classList.add('bg-danger');
+                    toast.show();
+                })
+                .finally(() => {
+                    addToCartBtn.disabled = false;
+                    if (cartControls.getAttribute('data-added') !== 'true') {
+                        addToCartBtn.textContent = 'เพิ่มลงตะกร้า';
+                    }
+                });
             });
         });
     });
