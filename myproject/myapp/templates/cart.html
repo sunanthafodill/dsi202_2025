@@ -7,19 +7,18 @@
 
     <!-- Toast Container -->
     <div class="toast-container position-fixed top-0 end-0 p-3">
-        <div id="cartToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <strong class="me-auto">แจ้งเตือน</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        <div id="cartToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
-            <div class="toast-body"></div>
         </div>
     </div>
 
     {% if cart_items %}
     <div class="cart-container">
         {% for item in cart_items %}
-        <div class="cart-item card mb-3 animate__animated animate__fadeIn">
+        <div class="cart-item card mb-3">
             <div class="row g-0 align-items-center">
                 <div class="col-md-3 col-4">
                     <img src="{{ item.store.image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid rounded-start" alt="{{ item.store.name }}" style="max-height: 120px; object-fit: cover;">
@@ -30,13 +29,13 @@
                             <h5 class="card-title mb-0">{{ item.store.name }}</h5>
                             <button class="btn btn-sm btn-outline-danger delete-item" data-store-id="{{ item.store.id }}"><i class="fas fa-trash"></i></button>
                         </div>
-                        <p class="card-text text-muted">ราคา: {{ item.store.discounted_price }} บาท</p>
+                        <p class="card-text text-muted">ราคา: {{ item.store.discounted_price|floatformat:0 }} บาท</p>
                         <div class="d-flex align-items-center my-2">
                             <button class="btn btn-outline-imsuk decrease-quantity" data-store-id="{{ item.store.id }}">-</button>
-                            <input type="number" class="quantity-input mx-2" value="{{ item.quantity }}" min="1" readonly>
+                            <input type="number" class="quantity-input mx-2" value="{{ item.quantity }}" min="1" max="{{ item.store.quantity_available|default:9999 }}" readonly>
                             <button class="btn btn-outline-imsuk increase-quantity" data-store-id="{{ item.store.id }}">+</button>
                         </div>
-                        <p class="card-text fw-bold">รวม: {{ item.total_discounted_price }} บาท</p>
+                        <p class="card-text fw-bold">รวม: {{ item.total_discounted_price|floatformat:0 }} บาท</p>
                         {% if item.allergens %}
                         <p class="card-text text-muted small">สารก่อภูมิแพ้: {{ item.allergens|join:", " }}</p>
                         {% endif %}
@@ -47,7 +46,7 @@
         {% endfor %}
         <div class="cart-summary card p-3 mt-4">
             <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">ยอดรวม: {{ total_price }} บาท</h4>
+                <h4 class="mb-0">ยอดรวม: {{ total_price|floatformat:0 }} บาท</h4>
                 <div>
                     <button class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#clearCartModal">ล้างตะกร้า</button>
                     <a href="{% url 'checkout' %}" class="btn btn-imsuk">ดำเนินการชำระเงิน</a>
@@ -88,75 +87,121 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const toastEl = document.getElementById('cartToast');
-        const toast = new bootstrap.Toast(toastEl);
+document.addEventListener('DOMContentLoaded', function() {
+    const toastEl = document.getElementById('cartToast');
+    const toast = new bootstrap.Toast(toastEl);
 
-        // Show toast for Django messages
-        {% if messages %}
-        {% for message in messages %}
-        toastEl.querySelector('.toast-body').textContent = "{{ message }}";
-        toastEl.classList.add('bg-{{ message.tags }}');
-        toast.show();
-        {% endfor %}
-        {% endif %}
+    // Show toast for Django messages
+    {% if messages %}
+    {% for message in messages %}
+    toastEl.querySelector('.toast-body').textContent = "{{ message }}";
+    toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+    toastEl.classList.add('bg-{{ message.tags }}');
+    toast.show();
+    {% endfor %}
+    {% endif %}
 
-        // Handle quantity buttons
-        document.querySelectorAll('.increase-quantity, .decrease-quantity').forEach(button => {
-            button.addEventListener('click', function() {
-                const storeId = this.getAttribute('data-store-id');
-                const input = this.parentElement.querySelector('.quantity-input');
-                let quantity = parseInt(input.value);
-                if (this.classList.contains('increase-quantity')) {
-                    quantity++;
-                } else if (quantity > 1) {
-                    quantity--;
+    // Handle quantity buttons
+    document.querySelectorAll('.increase-quantity, .decrease-quantity').forEach(button => {
+        button.addEventListener('click', function() {
+            const storeId = this.getAttribute('data-store-id');
+            const input = this.parentElement.querySelector('.quantity-input');
+            let quantity = parseInt(input.value);
+            const maxQuantity = parseInt(input.getAttribute('max'));
+
+            if (this.classList.contains('increase-quantity') && quantity < maxQuantity) {
+                quantity++;
+            } else if (this.classList.contains('decrease-quantity') && quantity > 1) {
+                quantity--;
+            } else {
+                return; // Do nothing if quantity exceeds max or is less than 1
+            }
+
+            updateCart(storeId, quantity, input);
+        });
+    });
+
+    // Handle delete buttons
+    document.querySelectorAll('.delete-item').forEach(button => {
+        button.addEventListener('click', function() {
+            const storeId = this.getAttribute('data-store-id');
+            updateCart(storeId, 0, null);
+        });
+    });
+
+    function updateCart(storeId, quantity, input) {
+        const formData = new FormData();
+        formData.append('store_id', storeId);
+        formData.append('quantity', quantity);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 'cart' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            toastEl.querySelector('.toast-body').textContent = data.message;
+            toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
+            toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
+            toast.show();
+
+            if (data.success) {
+                if (quantity === 0) {
+                    // Remove the cart item from the DOM
+                    const cartItem = document.querySelector(`.delete-item[data-store-id="${storeId}"]`).closest('.cart-item');
+                    if (cartItem) {
+                        cartItem.remove();
+                    }
+                } else if (input) {
+                    // Update quantity in the input
+                    input.value = quantity;
+                    // Update total price for the item
+                    const cartItem = input.closest('.cart-item');
+                    const price = parseFloat(cartItem.querySelector('.card-text.text-muted').textContent.match(/[\d.]+/)[0]);
+                    const totalPriceEl = cartItem.querySelector('.card-text.fw-bold');
+                    totalPriceEl.textContent = `รวม: ${(price * quantity).toFixed(0)} บาท`;
                 }
-                updateCart(storeId, quantity, input);
-            });
-        });
 
-        // Handle delete buttons
-        document.querySelectorAll('.delete-item').forEach(button => {
-            button.addEventListener('click', function() {
-                const storeId = this.getAttribute('data-store-id');
-                updateCart(storeId, 0, null);
-            });
-        });
-
-        function updateCart(storeId, quantity, input) {
-            fetch("{% url 'cart' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: `store_id=${storeId}&quantity=${quantity}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    toastEl.querySelector('.toast-body').textContent = data.message;
-                    toastEl.classList.remove('bg-danger', 'bg-success');
-                    toastEl.classList.add('bg-success');
-                    toast.show();
+                // Update cart summary
+                const cartItems = document.querySelectorAll('.cart-item');
+                if (cartItems.length === 0) {
+                    // If no items left, reload to show empty cart message
                     location.reload();
                 } else {
-                    toastEl.querySelector('.toast-body').textContent = data.message;
-                    toastEl.classList.remove('bg-danger', 'bg-success');
-                    toastEl.classList.add('bg-danger');
-                    toast.show();
+                    let totalPrice = 0;
+                    document.querySelectorAll('.cart-item').forEach(item => {
+                        const itemTotal = parseFloat(item.querySelector('.card-text.fw-bold').textContent.match(/[\d.]+/)[0]);
+                        totalPrice += itemTotal;
+                    });
+                    document.querySelector('.cart-summary h4').textContent = `ยอดรวม: ${totalPrice.toFixed(0)} บาท`;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด';
-                toastEl.classList.remove('bg-danger', 'bg-success');
-                toastEl.classList.add('bg-danger');
-                toast.show();
-            });
-        }
-    });
+
+                // Update cart badge
+                const badge = document.querySelector('.cart-badge');
+                if (badge) {
+                    const cartCount = Array.from(document.querySelectorAll('.quantity-input')).reduce((sum, input) => sum + parseInt(input.value), 0);
+                    badge.textContent = cartCount;
+                    badge.style.display = cartCount > 0 ? 'inline-block' : 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error updating cart:', error);
+            toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการอัปเดตตะกร้า กรุณาลองใหม่';
+            toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
+            toastEl.classList.add('bg-danger');
+            toast.show();
+        });
+    }
+});
 </script>
 {% endblock %}
