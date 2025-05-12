@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load socialaccount %}
-{% block title %}IMSUK - เข้าสู่ระบบ{% endblock %}
+{% block title %}<strong>IMSUK</strong> - เข้าสู่ระบบ{% endblock %}
 {% block content %}
 <div class="container my-5 animate__animated animate__fadeIn">
+    <div class="text-center mb-4">
+        <img src="{% static 'images/imsuk_logoja.png' %}" alt="IMSUK Logo" class="imsuk-logo-form">
+    </div>
     <h1 class="text-center mb-4" style="color: var(--imsuk-primary);">เข้าสู่ระบบ</h1>
     <div class="row justify-content-center">
         <div class="col-md-6">

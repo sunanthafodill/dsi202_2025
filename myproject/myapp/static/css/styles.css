@@ -396,3 +396,70 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--imsuk-primary);
     font-weight: 500;
 }
+/* Logo Styles */
+.imsuk-logo-nav {
+    height: 35px; /* ขนาดสำหรับ Navbar */
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.imsuk-logo-nav:hover {
+    transform: scale(1.05); /* ลดการขยายเพื่อความสมดุล */
+}
+
+.imsuk-logo-footer {
+    height: 25px; /* ขนาดเล็กสำหรับ Footer */
+    width: auto;
+    object-fit: contain;
+}
+
+.imsuk-logo-home {
+    height: 70px; /* ขนาดกลางสำหรับหน้า Home */
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 1rem;
+}
+
+.imsuk-logo-form {
+    height: 55px; /* ขนาดสำหรับหน้า Login/Signup */
+    width: auto;
+    object-fit: contain;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .imsuk-logo-nav {
+        height: 30px; /* เล็กลงในแท็บเล็ต */
+    }
+
+    .imsuk-logo-home {
+        height: 60px;
+    }
+
+    .imsuk-logo-form {
+        height: 45px;
+    }
+
+    .imsuk-logo-footer {
+        height: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .imsuk-logo-nav {
+        height: 25px; /* เล็กลงในมือถือ */
+    }
+
+    .imsuk-logo-home {
+        height: 50px;
+    }
+
+    .imsuk-logo-form {
+        height: 40px;
+    }
+
+    .imsuk-logo-footer {
+        height: 18px;
+    }
+}
