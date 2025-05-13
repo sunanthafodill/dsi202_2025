@@ -22,14 +22,14 @@
     <!-- Search Form -->
     <form method="get" class="search-form mb-4">
         <div class="row g-3 align-items-end">
-            <div class="col-md-6">
+            <div class="col-md-8">
                 <label for="search" class="form-label">ค้นหาร้านค้าหรือเมนู</label>
                 <div class="search-input-group position-relative">
                     <span class="search-icon position-absolute top-50 translate-middle-y ms-3">🔍</span>
                     <input type="text" class="form-control ps-5" name="search" id="search" value="{{ search_query }}" placeholder="เช่น พิซซ่า, ซูชิ, หรือชื่อร้าน" aria-label="ค้นหาร้านค้าหรือเมนู">
                 </div>
             </div>
-            <div class="col-md-3 offset-md-3">
+            <div class="col-md-4">
                 <button type="submit" class="btn btn-imsuk w-100" aria-label="ค้นหา">ค้นหา</button>
             </div>
         </div>
@@ -88,40 +88,21 @@
         {% endfor %}
     </div>
 
-    <!-- Pagination with Back/Next Buttons -->
-    {% if is_paginated %}
-    <div class="d-flex justify-content-between align-items-center mt-4">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" class="btn btn-imsuk" aria-label="ย้อนกลับ">
+    <!-- Navigation Buttons -->
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'home' %}" class="btn btn-imsuk" aria-label="ย้อนกลับไปหน้าหลัก">
             <i class="fas fa-arrow-left me-2"></i>ย้อนกลับ
+        </a>
+        {% if stores %}
+        <a href="{% url 'store_detail' stores.0.id %}" class="btn btn-imsuk" aria-label="ไปหน้ารายละเอียดร้านค้า">
+            ไปหน้ารายละเอียด<i class="fas fa-arrow-right ms-2"></i>
         </a>
         {% else %}
         <span class="btn btn-imsuk disabled" aria-hidden="true">
-            <i class="fas fa-arrow-left me-2"></i>ย้อนกลับ
-        </span>
-        {% endif %}
-
-        <nav aria-label="การนำทางหน้า">
-            <ul class="pagination justify-content-center mb-0">
-                {% for num in page_obj.paginator.page_range %}
-                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">{{ num }}</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </nav>
-
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" class="btn btn-imsuk" aria-label="ไปหน้าถัดไป">
-            ไปหน้าถัดไป<i class="fas fa-arrow-right ms-2"></i>
-        </a>
-        {% else %}
-        <span class="btn btn-imsuk disabled" aria-hidden="true">
-            ไปหน้าถัดไป<i class="fas fa-arrow-right ms-2"></i>
+            ไปหน้ารายละเอียด<i class="fas fa-arrow-right ms-2"></i>
         </span>
         {% endif %}
     </div>
-    {% endif %}
 
     <!-- Messages -->
     {% if messages %}
@@ -141,10 +122,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const toastEl = document.getElementById('cartToast');
     const toast = new bootstrap.Toast(toastEl);
     const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+    const currentCartStoreId = {{ current_cart_store_id|default:0 }}; // ID ร้านในตะกร้า (0 ถ้าว่าง)
 
     forms.forEach(form => {
         const cartControls = form.querySelector('.cart-controls');
         const quantityHidden = form.querySelector('.quantity-hidden');
+        const storeId = parseInt(form.getAttribute('data-store-id'));
         const storeName = form.getAttribute('data-store-name');
 
         // Event Delegation for Add to Cart button
@@ -156,6 +139,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const authModal = new bootstrap.Modal(document.getElementById('authModal'));
                     authModal.show();
                     toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกเพื่อเพิ่มสินค้าลงตะกร้า';
+                    toastEl.classList.remove('bg-success', 'bg-danger');
+                    toastEl.classList.add('bg-warning');
+                    toast.show();
+                    return;
+                }
+
+                // ตรวจสอบว่าร้านในตะกร้าตรงกับร้านที่เพิ่มหรือไม่
+                if (currentCartStoreId !== 0 && currentCartStoreId !== storeId) {
+                    toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
                     toastEl.classList.remove('bg-success', 'bg-danger');
                     toastEl.classList.add('bg-warning');
                     toast.show();
@@ -187,6 +179,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const authModal = new bootstrap.Modal(document.getElementById('authModal'));
                 authModal.show();
                 toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกเพื่อเพิ่มสินค้าลงตะกร้า';
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add('bg-warning');
+                toast.show();
+                return;
+            }
+
+            // ตรวจสอบร้านในตะกร้าอีกครั้ง
+            if (currentCartStoreId !== 0 && currentCartStoreId !== storeId) {
+                toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
                 toastEl.classList.remove('bg-success', 'bg-danger');
                 toastEl.classList.add('bg-warning');
                 toast.show();
@@ -228,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     // Reset to "Add to Cart" button after confirmation
                     cartControls.setAttribute('data-added', 'false');
-                    quantityHidden.value = 1; // Ensure quantity resets to 1
+                    quantityHidden.value = 1;
                     cartControls.innerHTML = `
                         <button type="button" class="btn btn-imsuk add-to-cart-btn" aria-label="เพิ่มลงตะกร้า">
                             <i class="fas fa-cart-plus me-2"></i>เพิ่มลงตะกร้า

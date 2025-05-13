@@ -121,10 +121,11 @@ h1, h2, h3, h4, h5, h6 {
     width: 100%;
     max-height: 400px;
     object-fit: cover;
+    cursor: pointer;
 }
 
 .store-image:hover {
-    /* ลบ transform เพื่อปิดการขยายเมื่อ hover */
+    opacity: 0.9;
 }
 
 .additional-images {
@@ -141,11 +142,30 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 8px;
     border: 1px solid var(--imsuk-secondary);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
+    cursor: pointer;
 }
 
 .additional-image:hover {
     transform: scale(1.1);
+}
+
+/* Carousel in Modal */
+.carousel-item img {
+    max-height: 500px;
+    object-fit: contain;
+    margin: auto;
+}
+
+/* Allergen Styles */
+.allergen {
+    display: inline-block;
+    border: 1px solid var(--imsuk-primary);
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: 3px;
+    background-color: #e8f5e9;
+    color: var(--imsuk-primary);
+    font-size: 0.9rem;
 }
 
 /* Store Name */
@@ -263,6 +283,20 @@ h1, h2, h3, h4, h5, h6 {
     transform: scale(1.05);
 }
 
+.btn-imsuk-nav {
+    background-color: transparent;
+    border: 1px solid var(--imsuk-secondary);
+    color: var(--imsuk-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.btn-imsuk-nav:hover {
+    background-color: var(--imsuk-secondary);
+    color: var(--imsuk-primary);
+}
+
 /* Toast */
 .toast {
     border: 2px solid var(--imsuk-secondary);
@@ -280,6 +314,47 @@ h1, h2, h3, h4, h5, h6 {
     color: white !important;
 }
 
+.bg-warning {
+    background-color: #FFC107 !important;
+    color: var(--imsuk-text) !important;
+}
+
+/* Alerts */
+.alert-success {
+    background-color: var(--imsuk-secondary);
+    color: var(--imsuk-primary);
+    border-color: var(--imsuk-primary);
+}
+
+.alert-danger {
+    background-color: var(--imsuk-accent);
+    color: white;
+    border-color: var(--imsuk-accent);
+}
+
+/* Modal */
+.modal-content {
+    border: 2px solid var(--imsuk-secondary);
+    border-radius: 10px;
+}
+
+/* Form */
+.form-control {
+    border: 1px solid var(--imsuk-secondary);
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--imsuk-primary);
+    box-shadow: 0 0 0 0.2rem rgba(63, 130, 64, 0.25);
+}
+
+.form-label {
+    color: var(--imsuk-primary);
+    font-weight: 500;
+}
+
 /* Focus States */
 .store-card:focus-within,
 .btn-imsuk:focus,
@@ -289,7 +364,38 @@ h1, h2, h3, h4, h5, h6 {
     outline-offset: 2px;
 }
 
-/* Responsive */
+/* Logo Styles */
+.imsuk-logo-nav {
+    height: 35px;
+    width: auto;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.imsuk-logo-nav:hover {
+    transform: scale(1.05);
+}
+
+.imsuk-logo-footer {
+    height: 25px;
+    width: auto;
+    object-fit: contain;
+}
+
+.imsuk-logo-home {
+    height: 70px;
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 1rem;
+}
+
+.imsuk-logo-form {
+    height: 55px;
+    width: auto;
+    object-fit: contain;
+}
+
+/* Responsive Adjustments */
 @media (max-width: 768px) {
     .store-card {
         padding: 15px;
@@ -306,6 +412,10 @@ h1, h2, h3, h4, h5, h6 {
     .additional-image {
         width: 100px;
         height: 100px;
+    }
+
+    .carousel-item img {
+        max-height: 400px;
     }
 
     .store-name {
@@ -339,98 +449,14 @@ h1, h2, h3, h4, h5, h6 {
     .opening-hours {
         font-size: 0.9rem;
     }
-}
-/* เพิ่มสไตล์สำหรับ .btn-imsuk-nav */
-.btn-imsuk-nav {
-    background-color: transparent;
-    border: 1px solid var(--imsuk-secondary);
-    color: var(--imsuk-secondary);
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    transition: all 0.3s ease;
-}
 
-.btn-imsuk-nav:hover {
-    background-color: var(--imsuk-secondary);
-    color: var(--imsuk-primary);
-}
+    .allergen {
+        font-size: 0.8rem;
+        padding: 3px 8px;
+    }
 
-/* เพิ่มสไตล์สำหรับ .bg-imsuk */
-.bg-imsuk {
-    background-color: var(--imsuk-secondary) !important;
-    color: var(--imsuk-primary) !important;
-}
-
-/* ปรับปรุง alert เพื่อให้สอดคล้องกับ IMSUK */
-.alert-success {
-    background-color: var(--imsuk-secondary);
-    color: var(--imsuk-primary);
-    border-color: var(--imsuk-primary);
-}
-
-.alert-danger {
-    background-color: var(--imsuk-accent);
-    color: white;
-    border-color: var(--imsuk-accent);
-}
-
-/* ปรับแต่ง Modal */
-.modal-content {
-    border: 2px solid var(--imsuk-secondary);
-    border-radius: 10px;
-}
-
-/* ปรับแต่งฟอร์ม */
-.form-control {
-    border: 1px solid var(--imsuk-secondary);
-    border-radius: 5px;
-    transition: border-color 0.3s ease;
-}
-
-.form-control:focus {
-    border-color: var(--imsuk-primary);
-    box-shadow: 0 0 0 0.2rem rgba(63, 130, 64, 0.25);
-}
-
-.form-label {
-    color: var(--imsuk-primary);
-    font-weight: 500;
-}
-/* Logo Styles */
-.imsuk-logo-nav {
-    height: 35px; /* ขนาดสำหรับ Navbar */
-    width: auto;
-    object-fit: contain;
-    transition: transform 0.3s ease;
-}
-
-.imsuk-logo-nav:hover {
-    transform: scale(1.05); /* ลดการขยายเพื่อความสมดุล */
-}
-
-.imsuk-logo-footer {
-    height: 25px; /* ขนาดเล็กสำหรับ Footer */
-    width: auto;
-    object-fit: contain;
-}
-
-.imsuk-logo-home {
-    height: 70px; /* ขนาดกลางสำหรับหน้า Home */
-    width: auto;
-    object-fit: contain;
-    margin-bottom: 1rem;
-}
-
-.imsuk-logo-form {
-    height: 55px; /* ขนาดสำหรับหน้า Login/Signup */
-    width: auto;
-    object-fit: contain;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
     .imsuk-logo-nav {
-        height: 30px; /* เล็กลงในแท็บเล็ต */
+        height: 30px;
     }
 
     .imsuk-logo-home {
@@ -447,8 +473,29 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 576px) {
+    .pagination {
+        flex-wrap: wrap;
+    }
+
+    .btn-imsuk {
+        margin: 0.5rem 0;
+    }
+
+    .store-image {
+        max-height: 250px;
+    }
+
+    .additional-image {
+        width: 80px;
+        height: 80px;
+    }
+
+    .carousel-item img {
+        max-height: 300px;
+    }
+
     .imsuk-logo-nav {
-        height: 25px; /* เล็กลงในมือถือ */
+        height: 25px;
     }
 
     .imsuk-logo-home {
@@ -461,13 +508,5 @@ h1, h2, h3, h4, h5, h6 {
 
     .imsuk-logo-footer {
         height: 18px;
-    }
-}
-@media (max-width: 576px) {
-    .pagination {
-        flex-wrap: wrap;
-    }
-    .btn-imsuk {
-        margin: 0.5rem 0;
     }
 }

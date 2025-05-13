@@ -18,7 +18,6 @@ def home(request):
     }
     return render(request, 'home.html', context)
 
-
 class StoreListView(ListView):
     model = Store
     template_name = 'store_list.html'
@@ -44,6 +43,27 @@ class StoreListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('search', '')
+        context.update(base_context(self.request))
+        return context
+
+    def post(self, request, *args, **kwargs):
+        return add_to_cart(request)
+
+class StoreDetailView(DetailView):
+    model = Store
+    template_name = 'store_detail.html'
+    context_object_name = 'store'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['store'].additional_images = self.object.additional_images or []
+        # Get cart quantity for the store
+        cart_quantity = 0
+        if self.request.user.is_authenticated:
+            cart_item = Cart.objects.filter(user=self.request.user, store=self.object).first()
+            if cart_item:
+                cart_quantity = cart_item.quantity
+        context['cart_quantity'] = cart_quantity
         context.update(base_context(self.request))
         return context
 
@@ -117,20 +137,6 @@ def base_context(request):
         'cart_count': cart_count,
         'is_authenticated': request.user.is_authenticated,
     }
-
-class StoreDetailView(DetailView):
-    model = Store
-    template_name = 'store_detail.html'
-    context_object_name = 'store'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['store'].additional_images = self.object.additional_images or []
-        context.update(base_context(self.request))
-        return context
-
-    def post(self, request, *args, **kwargs):
-        return add_to_cart(request)
 
 def cart(request):
     if not request.user.is_authenticated:
