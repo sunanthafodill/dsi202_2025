@@ -18,4 +18,6 @@ urlpatterns = [
     path('orders/', views.order_history, name='order_history'),
     path('checkout/success/<uuid:order_id>/', views.checkout_success, name='checkout_success'),
     path('order/delete/<uuid:order_id>/', views.delete_order, name='delete_order'),
+    path('order/update_status/<int:order_id>/', views.update_order_status, name='update_order_status'),
+    path('review/submit/', views.submit_review, name='submit_review'),
 ]

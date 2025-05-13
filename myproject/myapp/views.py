@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.db.models import Prefetch
 from django.utils import timezone
 from django.views.generic import ListView, DetailView
 from django.http import JsonResponse
@@ -6,11 +7,13 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import Store, Cart, Order, Address, Allergy, Profile, OrderItem
+from .models import Store, Cart, Order, Address, Allergy, Profile, OrderItem, Review
 from .forms import AddressForm, AllergyForm, ProfileForm
 from django.contrib.auth.forms import UserCreationForm
 from uuid import uuid4
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import timedelta
 
 def signup(request):
     if request.method == 'POST':
@@ -64,22 +67,21 @@ class StoreListView(ListView):
             available_from__lte=current_time,
             available_until__gte=current_time
         )
+        
         search_query = self.request.GET.get('search', '').strip()
         if search_query:
             queryset = queryset.filter(
                 Q(name__icontains=search_query) |
                 Q(description__icontains=search_query)
             )
+
+        # prefetch reviews (ทั้งหมด) แล้วไป slice ใน template
+        queryset = queryset.prefetch_related(
+            Prefetch('reviews', queryset=Review.objects.order_by('-review_date'))
+        )
+
         return queryset
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('search', '')
-        context.update(base_context(self.request))
-        return context
-
-    def post(self, request, *args, **kwargs):
-        return add_to_cart(request)
 
 class StoreDetailView(DetailView):
     model = Store
@@ -466,21 +468,73 @@ def profile_settings(request):
     context.update(base_context(request))
     return render(request, 'profile_settings.html', context)
 
-@login_required(login_url='login')
+@login_required
 def order_history(request):
-    orders = Order.objects.filter(buyer=request.user).order_by('-order_time')
+    orders = Order.objects.filter(buyer=request.user).prefetch_related(
+        Prefetch('items', queryset=OrderItem.objects.select_related('store')),
+        Prefetch('items__store__reviews', queryset=Review.objects.filter(user=request.user))
+    ).order_by('-order_time')
+
+    for order in orders:
+        # คำนวณ estimated_time โดยบวก 25 นาที
+        order.estimated_time = order.order_time + timedelta(minutes=25)
+        for item in order.items.all():
+            review = item.store.reviews.filter(user=request.user).first()
+            item.has_reviewed = bool(review)
+            item.review_rating = review.rating if review else None
+
     context = {
         'orders': orders,
     }
     context.update(base_context(request))
     return render(request, 'order_history.html', context)
 
+
 @login_required(login_url='login')
 def delete_order(request, order_id):
     try:
         order = Order.objects.get(id=order_id, buyer=request.user)
         order.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'ลบคำสั่งซื้อเรียบร้อยแล้ว'})
         messages.success(request, 'ลบคำสั่งซื้อเรียบร้อยแล้ว')
     except Order.DoesNotExist:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'})
         messages.error(request, 'ไม่พบคำสั่งซื้อ')
     return redirect('order_history')
+
+@csrf_exempt
+def update_order_status(request, order_id):
+    try:
+        order = Order.objects.get(id=order_id)
+        order.status = 'completed'
+        order.save()
+        return JsonResponse({'success': True})
+    except Order.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'}, status=404)
+
+@require_POST
+@login_required(login_url='login')
+def submit_review(request):
+    store_id = request.POST.get('store_id')
+    rating = request.POST.get('rating')
+    
+    try:
+        rating = int(rating)
+        if not 1 <= rating <= 5:
+            return JsonResponse({'success': False, 'message': 'คะแนนต้องอยู่ระหว่าง 1-5'})
+        
+        store = get_object_or_404(Store, id=store_id)
+        
+        if Review.objects.filter(user=request.user, store=store).exists():
+            return JsonResponse({'success': False, 'message': 'คุณรีวิวร้านนี้แล้ว'})
+        
+        Review.objects.create(
+            user=request.user,
+            store=store,
+            rating=rating
+        )
+        return JsonResponse({'success': True, 'message': 'รีวิวสำเร็จ'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})

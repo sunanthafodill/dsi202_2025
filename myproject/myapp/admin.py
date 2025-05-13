@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from .models import Allergy, Address, Store, Order, OrderItem, Delivery, Review, Cart, Profile
 from .forms import StoreAdminForm
+from django.db.models import Avg, Count
 
 # Inline for Allergy
 class AllergyInline(admin.TabularInline):
@@ -50,10 +51,11 @@ class AddressAdmin(admin.ModelAdmin):
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
     form = StoreAdminForm
-    list_display = ('name', 'price', 'discount_percentage', 'quantity_available', 'is_active', 'id')
+    list_display = ('name', 'price', 'discount_percentage', 'quantity_available', 'is_active', 'average_rating', 'total_reviews', 'id')
     list_filter = ('is_active',)
     search_fields = ('name', 'description', 'allergen_ingredients', 'additional_details')
     list_editable = ('is_active',)
+    inlines = [ReviewInline]  # เพิ่ม ReviewInline เพื่อดูรีวิวในหน้า Store
     fieldsets = (
         (None, {
             'fields': ('name', 'description', 'additional_details')
@@ -68,6 +70,24 @@ class StoreAdmin(admin.ModelAdmin):
             'fields': ('allergen_ingredients',)
         }),
     )
+
+    def average_rating(self, obj):
+        """คำนวณคะแนนรีวิวเฉลี่ยของร้านค้า"""
+        result = obj.reviews.aggregate(avg_rating=Avg('rating'))
+        avg_rating = result['avg_rating']
+        return f"{avg_rating:.1f}/5" if avg_rating else "ยังไม่มีรีวิว"
+
+    def total_reviews(self, obj):
+        """นับจำนวนรีวิวทั้งหมดของร้านค้า"""
+        return obj.reviews.count()
+
+    average_rating.short_description = 'คะแนนเฉลี่ย'
+    total_reviews.short_description = 'จำนวนรีวิว'
+
+    def get_queryset(self, request):
+        """เพิ่ม prefetch_related เพื่อลดการ query ฐานข้อมูล"""
+        queryset = super().get_queryset(request)
+        return queryset.prefetch_related('reviews')
 
 # Admin for Order
 @admin.register(Order)
