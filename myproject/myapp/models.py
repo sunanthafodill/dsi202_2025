@@ -43,13 +43,7 @@ class Address(models.Model):
         verbose_name = "Address"
         verbose_name_plural = "Addresses"
 
-class DeliveryAddress(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    address_line1 = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-
-# Store Model (Updated)
+# Store Model
 class Store(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -94,6 +88,29 @@ class Store(models.Model):
         verbose_name = "Store"
         verbose_name_plural = "Stores"
 
+# Cart Model
+class Cart(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    store = models.ForeignKey(Store, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    note = models.TextField(blank=True, default='')  # เพิ่มฟิลด์ note
+    created_at = ThailandTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.store.name} (x{self.quantity})"
+
+    @property
+    def total_price(self):
+        return self.store.price * self.quantity
+
+    @property
+    def total_discounted_price(self):
+        return self.store.discounted_price * self.quantity
+
+    class Meta:
+        verbose_name = "Cart"
+        verbose_name_plural = "Carts"
 
 # Order Model
 class Order(models.Model):
@@ -104,11 +121,19 @@ class Order(models.Model):
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
+    PAYMENT_METHODS = [
+        ('bank_transfer', 'โอนเงิน'),
+        ('credit_card', 'บัตรเครดิต'),
+        ('cash_on_delivery', 'เงินสดเมื่อรับ'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    delivery_address = models.ForeignKey(Address, on_delete=models.PROTECT, related_name='orders', null=True, blank=True)  # เพิ่ม null=True
+    delivery_address = models.ForeignKey(Address, on_delete=models.PROTECT, related_name='orders', null=True)
     total_price = models.FloatField(validators=[MinValueValidator(0.0)])
+    shipping_fee = models.FloatField(default=9.0, validators=[MinValueValidator(0.0)])
+    total_with_shipping = models.FloatField(validators=[MinValueValidator(0.0)])
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_METHODS)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     order_time = ThailandTimeField(auto_now_add=True)
 
@@ -126,6 +151,7 @@ class OrderItem(models.Model):
     store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='order_items')
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     price = models.FloatField(validators=[MinValueValidator(0.0)])
+    note = models.TextField(blank=True, default='')  # เพิ่มฟิลด์ note
 
     def __str__(self):
         return f"{self.store.name} (x{self.quantity}) in Order {self.order.id}"
@@ -175,21 +201,3 @@ class Review(models.Model):
     class Meta:
         verbose_name = "Review"
         verbose_name_plural = "Reviews"
-
-class Cart(models.Model):
-    session_key = models.CharField(max_length=40, null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(default=1)
-    created_at = ThailandTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.username} - {self.store.name} (x{self.quantity})"
-    
-    @property
-    def total_price(self):
-        return self.store.price * self.quantity
-
-    @property
-    def total_discounted_price(self):
-        return self.store.discounted_price * self.quantity
