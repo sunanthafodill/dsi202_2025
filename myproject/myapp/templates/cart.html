@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
-{% load static %}
-{% block title %}IMSUK - ตะกร้า{% endblock %}
+{% load static store_tags %}
+{% block title %}<strong>IMSUK</strong> - ตะกร้า{% endblock %}
 {% block content %}
 <div class="container my-5">
-    <h1 class="cart-title mb-4">ตะกร้าของคุณ</h1>
-
     <!-- Toast Container -->
     <div class="toast-container position-fixed top-0 end-0 p-3">
         <div id="cartToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -15,42 +13,88 @@
         </div>
     </div>
 
+    <h1 class="cart-title mb-4 text-center text-success">ตะกร้าของคุณ</h1>
+
     {% if cart_items %}
     <div class="cart-container">
         {% for item in cart_items %}
-        <div class="cart-item card mb-3">
+        <div class="cart-item card mb-3 shadow-sm">
             <div class="row g-0 align-items-center">
                 <div class="col-md-3 col-4">
-                    <img src="{{ item.store.image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid rounded-start" alt="{{ item.store.name }}" style="max-height: 120px; object-fit: cover;">
+                    <img src="{{ item.store.store_image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid rounded-start store-image" alt="{{ item.store.name }}">
                 </div>
                 <div class="col-md-9 col-8">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">{{ item.store.name }}</h5>
-                            <button class="btn btn-sm btn-outline-danger delete-item" data-store-id="{{ item.store.id }}"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-sm btn-outline-danger delete-item" data-store-id="{{ item.store.id }}" aria-label="ลบรายการ"><i class="fas fa-trash"></i></button>
                         </div>
                         <p class="card-text text-muted">ราคา: {{ item.store.discounted_price|floatformat:0 }} บาท</p>
                         <div class="d-flex align-items-center my-2">
-                            <button class="btn btn-outline-imsuk decrease-quantity" data-store-id="{{ item.store.id }}">-</button>
-                            <input type="number" class="quantity-input mx-2" value="{{ item.quantity }}" min="1" max="{{ item.store.quantity_available|default:9999 }}" readonly>
-                            <button class="btn btn-outline-imsuk increase-quantity" data-store-id="{{ item.store.id }}">+</button>
+                            <button class="btn btn-outline-imsuk decrease-quantity" data-store-id="{{ item.store.id }}" aria-label="ลดจำนวน">-</button>
+                            <input type="number" class="quantity-input mx-2" value="{{ item.quantity }}" min="1" max="{{ item.store.quantity_available|default:9999 }}" readonly aria-label="จำนวน">
+                            <button class="btn btn-outline-imsuk increase-quantity" data-store-id="{{ item.store.id }}" aria-label="เพิ่มจำนวน">+</button>
                         </div>
                         <p class="card-text fw-bold">รวม: {{ item.total_discounted_price|floatformat:0 }} บาท</p>
+                        <!-- สารก่อภูมิแพ้ -->
                         {% if item.allergens %}
-                        <p class="card-text text-muted small">สารก่อภูมิแพ้: {{ item.allergens|join:", " }}</p>
+                        <div class="allergen-list mb-2">
+                            {% if item.has_allergy_warning %}
+                            <p class="text-danger fw-bold mb-1"><i class="fas fa-exclamation-triangle"></i> คำเตือน: สินค้านี้อาจมีสารก่อภูมิแพ้ที่คุณแพ้</p>
+                            {% endif %}
+                            {% for allergen in item.allergens|split:"," %}
+                                <span class="allergen">{{ allergen|strip }}</span>
+                            {% endfor %}
+                        </div>
                         {% endif %}
+                        <div class="mt-2">
+                            <label for="note-{{ item.store.id }}" class="form-label">โน้ตสำหรับร้านค้า</label>
+                            <textarea name="note" class="form-control note-input" id="note-{{ item.store.id }}" placeholder="เช่น ไม่ใส่ผัก, เผ็ดน้อย" rows="2">{{ item.note }}</textarea>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         {% endfor %}
-        <div class="cart-summary card p-3 mt-4">
+        <div class="cart-summary card p-4 mt-4 shadow-sm">
+            <h4 class="mb-3">สรุปยอด</h4>
+            <div class="d-flex justify-content-between mb-2">
+                <span>ค่าสินค้า:</span>
+                <span>{{ total_price|floatformat:0 }} บาท</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>ค่าส่ง:</span>
+                <span>{{ shipping_fee|floatformat:0 }} บาท</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold mb-3">
+                <span>ยอดรวม:</span>
+                <span>{{ total_with_shipping|floatformat:0 }} บาท</span>
+            </div>
+            <div class="mb-3">
+                <label for="payment_method" class="form-label">ช่องทางชำระเงิน</label>
+                <select name="payment_method" id="payment_method" class="form-select" aria-label="เลือกช่องทางชำระเงิน">
+                    <option value="promptpay">PromptPay</option>
+                    <option value="credit_card">บัตรเครดิต</option>
+                    <option value="cash">เงินสด</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="address_id" class="form-label">ที่อยู่จัดส่ง</label>
+                <select name="address_id" id="address_id" class="form-select" aria-label="เลือกที่อยู่จัดส่ง">
+                    <option value="">เลือกที่อยู่</option>
+                    {% for address in addresses %}
+                    <option value="{{ address.id }}">{{ address.label }} - {{ address.address_line }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">ยอดรวม: {{ total_price|floatformat:0 }} บาท</h4>
-                <div>
-                    <button class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#clearCartModal">ล้างตะกร้า</button>
-                    <a href="{% url 'checkout' %}" class="btn btn-imsuk">ดำเนินการชำระเงิน</a>
-                </div>
+                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#clearCartModal" aria-label="ล้างตะกร้า">ล้างตะกร้า</button>
+                <form method="post" action="{% url 'checkout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="payment_method" id="payment_method_hidden">
+                    <input type="hidden" name="address_id" id="address_id_hidden">
+                    <button type="submit" class="btn btn-imsuk" aria-label="ดำเนินการชำระเงิน">ดำเนินการชำระเงิน</button>
+                </form>
             </div>
         </div>
     </div>
@@ -91,7 +135,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const toastEl = document.getElementById('cartToast');
     const toast = new bootstrap.Toast(toastEl);
 
-    // Show toast for Django messages
     {% if messages %}
     {% for message in messages %}
     toastEl.querySelector('.toast-body').textContent = "{{ message }}";
@@ -101,11 +144,11 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endfor %}
     {% endif %}
 
-    // Handle quantity buttons
     document.querySelectorAll('.increase-quantity, .decrease-quantity').forEach(button => {
         button.addEventListener('click', function() {
             const storeId = this.getAttribute('data-store-id');
             const input = this.parentElement.querySelector('.quantity-input');
+            const noteInput = this.closest('.card-body').querySelector('.note-input');
             let quantity = parseInt(input.value);
             const maxQuantity = parseInt(input.getAttribute('max'));
 
@@ -114,25 +157,40 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (this.classList.contains('decrease-quantity') && quantity > 1) {
                 quantity--;
             } else {
-                return; // Do nothing if quantity exceeds max or is less than 1
+                return;
             }
 
-            updateCart(storeId, quantity, input);
+            updateCart(storeId, quantity, noteInput.value, input);
         });
     });
 
-    // Handle delete buttons
     document.querySelectorAll('.delete-item').forEach(button => {
         button.addEventListener('click', function() {
             const storeId = this.getAttribute('data-store-id');
-            updateCart(storeId, 0, null);
+            updateCart(storeId, 0, '', null);
         });
     });
 
-    function updateCart(storeId, quantity, input) {
+    document.querySelectorAll('.note-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const storeId = this.closest('.cart-item').querySelector('.delete-item').getAttribute('data-store-id');
+            const quantityInput = this.closest('.card-body').querySelector('.quantity-input');
+            updateCart(storeId, parseInt(quantityInput.value), this.value, quantityInput);
+        });
+    });
+
+    document.querySelector('form[action="{% url 'checkout' %}"]').addEventListener('submit', function(e) {
+        const paymentMethod = document.getElementById('payment_method').value;
+        const addressId = document.getElementById('address_id').value;
+        document.getElementById('payment_method_hidden').value = paymentMethod;
+        document.getElementById('address_id_hidden').value = addressId;
+    });
+
+    function updateCart(storeId, quantity, note, input) {
         const formData = new FormData();
         formData.append('store_id', storeId);
         formData.append('quantity', quantity);
+        formData.append('note', note);
         formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
         fetch("{% url 'cart' %}", {
@@ -156,36 +214,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 if (quantity === 0) {
-                    // Remove the cart item from the DOM
                     const cartItem = document.querySelector(`.delete-item[data-store-id="${storeId}"]`).closest('.cart-item');
                     if (cartItem) {
                         cartItem.remove();
                     }
                 } else if (input) {
-                    // Update quantity in the input
                     input.value = quantity;
-                    // Update total price for the item
                     const cartItem = input.closest('.cart-item');
                     const price = parseFloat(cartItem.querySelector('.card-text.text-muted').textContent.match(/[\d.]+/)[0]);
                     const totalPriceEl = cartItem.querySelector('.card-text.fw-bold');
                     totalPriceEl.textContent = `รวม: ${(price * quantity).toFixed(0)} บาท`;
                 }
 
-                // Update cart summary
                 const cartItems = document.querySelectorAll('.cart-item');
                 if (cartItems.length === 0) {
-                    // If no items left, reload to show empty cart message
                     location.reload();
                 } else {
                     let totalPrice = 0;
-                    document.querySelectorAll('.cart-item').forEach(item => {
+                    cartItems.forEach(item => {
                         const itemTotal = parseFloat(item.querySelector('.card-text.fw-bold').textContent.match(/[\d.]+/)[0]);
                         totalPrice += itemTotal;
                     });
-                    document.querySelector('.cart-summary h4').textContent = `ยอดรวม: ${totalPrice.toFixed(0)} บาท`;
+                    const shippingFee = {{ shipping_fee }};
+                    document.querySelector('.cart-summary .d-flex.mb-2:nth-child(1) span:last-child').textContent = `${totalPrice.toFixed(0)} บาท`;
+                    document.querySelector('.cart-summary .d-flex.fw-bold span:last-child').textContent = `${(totalPrice + shippingFee).toFixed(0)} บาท`;
                 }
 
-                // Update cart badge
                 const badge = document.querySelector('.cart-badge');
                 if (badge) {
                     const cartCount = Array.from(document.querySelectorAll('.quantity-input')).reduce((sum, input) => sum + parseInt(input.value), 0);

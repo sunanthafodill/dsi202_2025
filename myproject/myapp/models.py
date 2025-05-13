@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 import uuid
 from django.utils import timezone
 
@@ -29,12 +29,20 @@ class Allergy(models.Model):
 class Address(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
-    label = models.CharField(max_length=255)
-    address_line = models.TextField()
-    city = models.CharField(max_length=100)
-    postal_code = models.CharField(max_length=20)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    label = models.CharField(max_length=255, help_text="เช่น บ้าน, ที่ทำงาน")
+    subdistrict = models.CharField(max_length=100, help_text="ตำบล/แขวง")
+    district = models.CharField(max_length=100, help_text="อำเภอ/เขต")
+    province = models.CharField(max_length=100, help_text="จังหวัด")
+    postal_code = models.CharField(
+        max_length=5,
+        validators=[RegexValidator(r'^\d{5}$', 'รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก')],
+        help_text="รหัสไปรษณีย์ 5 หลัก"
+    )
+    phone_number = models.CharField(
+        max_length=10,
+        validators=[RegexValidator(r'^\d{10}$', 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก')],
+        help_text="เบอร์โทร 10 หลัก"
+    )
 
     def __str__(self):
         return f"{self.label} ({self.user.username})"
@@ -42,6 +50,23 @@ class Address(models.Model):
     class Meta:
         verbose_name = "Address"
         verbose_name_plural = "Addresses"
+
+# Profile Model
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    phone_number = models.CharField(
+        max_length=10,
+        blank=True,
+        validators=[RegexValidator(r'^\d{10}$', 'เบอร์โทรต้องเป็นตัวเลข 10 หลัก')],
+        help_text="เบอร์โทร 10 หลัก (ถ้ามี)"
+    )
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"
+
+    class Meta:
+        verbose_name = "Profile"
+        verbose_name_plural = "Profiles"
 
 # Store Model
 class Store(models.Model):
@@ -94,7 +119,7 @@ class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
-    note = models.TextField(blank=True, default='')  # เพิ่มฟิลด์ note
+    note = models.TextField(blank=True, default='')
     created_at = ThailandTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -151,7 +176,7 @@ class OrderItem(models.Model):
     store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='order_items')
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     price = models.FloatField(validators=[MinValueValidator(0.0)])
-    note = models.TextField(blank=True, default='')  # เพิ่มฟิลด์ note
+    note = models.TextField(blank=True, default='')
 
     def __str__(self):
         return f"{self.store.name} (x{self.quantity}) in Order {self.order.id}"

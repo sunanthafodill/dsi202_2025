@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Allergy, Address, Store, Order, OrderItem, Delivery, Review, Cart
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from .models import Allergy, Address, Store, Order, OrderItem, Delivery, Review, Cart, Profile
 from .forms import StoreAdminForm
 
 # Inline for Allergy
@@ -12,7 +14,7 @@ class AllergyInline(admin.TabularInline):
 class AddressInline(admin.TabularInline):
     model = Address
     extra = 1
-    fields = ('label', 'address_line', 'city', 'postal_code', 'latitude', 'longitude')
+    fields = ('label', 'subdistrict', 'district', 'province', 'postal_code', 'phone_number')
 
 # Inline for OrderItem
 class OrderItemInline(admin.TabularInline):
@@ -39,12 +41,12 @@ class AllergyAdmin(admin.ModelAdmin):
 # Admin for Address
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
-    list_display = ('label', 'user', 'city', 'postal_code', 'id')
-    list_filter = ('city',)
-    search_fields = ('label', 'address_line', 'city', 'postal_code', 'user__username')
+    list_display = ('label', 'user', 'subdistrict', 'district', 'province', 'postal_code', 'phone_number', 'id')
+    list_filter = ('province', 'district')
+    search_fields = ('label', 'subdistrict', 'district', 'province', 'postal_code', 'phone_number', 'user__username')
     list_select_related = ('user',)
 
-# Admin for Store (Updated)
+# Admin for Store
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
     form = StoreAdminForm
@@ -120,6 +122,7 @@ class ReviewAdmin(admin.ModelAdmin):
     list_select_related = ('store', 'user')
     readonly_fields = ('review_date',)
 
+# Admin for Cart
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     list_display = ('user', 'store', 'quantity', 'created_at')
@@ -127,10 +130,14 @@ class CartAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'store__name')
     list_select_related = ('user', 'store')
 
-# Customize User admin to include related models
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
+# Admin for Profile
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone_number')
+    search_fields = ('user__username', 'phone_number')
+    list_select_related = ('user',)
 
+# Customize User admin to include related models
 class CustomUserAdmin(UserAdmin):
     inlines = [AllergyInline, AddressInline]
 

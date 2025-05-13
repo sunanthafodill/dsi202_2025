@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}<strong>IMSUK</strong> - สั่งซื้อสำเร็จ{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <h1 class="text-success text-center mb-4">สั่งซื้อสำเร็จ!</h1>
+    <div class="card shadow-sm p-4">
+        <h4>หมายเลขคำสั่งซื้อ: {{ order.id }}</h4>
+        <p><strong>วันที่สั่งซื้อ:</strong> {{ order.order_time|date:"d/m/Y H:i" }}</p>
+        <p><strong>ช่องทางชำระเงิน:</strong> {{ order.get_payment_method_display }}</p>
+        <p><strong>ที่อยู่จัดส่ง:</strong> {{ order.delivery_address.label }} - {{ order.delivery_address.address_line }}</p>
+        <h5 class="mt-4">รายการสั่งซื้อ</h5>
+        {% for item in order.items.all %}
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body">
+                <h6>{{ item.store.name }}</h6>
+                <p class="mb-1">จำนวน: {{ item.quantity }}</p>
+                <p class="mb-1">ราคา: {{ item.price|floatformat:0 }} บาท</p>
+                <p class="mb-1">รวม: {{ item.price|floatformat:0|multiply:item.quantity }} บาท</p>
+                {% if item.note %}
+                <p class="mb-1">โน้ต: {{ item.note }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        <div class="d-flex justify-content-between mt-3">
+            <span>ค่าสินค้า:</span>
+            <span>{{ order.total_price|floatformat:0 }} บาท</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>ค่าส่ง:</span>
+            <span>{{ order.shipping_fee|floatformat:0 }} บาท</span>
+        </div>
+        <div class="d-flex justify-content-between fw-bold">
+            <span>ยอดรวม:</span>
+            <span>{{ order.total_with_shipping|floatformat:0 }} บาท</span>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'store_list' %}" class="btn btn-imsuk" aria-label="กลับไปหน้ารายการร้านค้า">
+            <i class="fas fa-arrow-left me-2"></i>กลับไปหน้าร้านค้า
+        </a>
+        <a href="{% url 'home' %}" class="btn btn-imsuk" aria-label="ไปหน้าหลัก">
+            ไปหน้าหลัก<i class="fas fa-arrow-right ms-2"></i>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,12 +1,18 @@
 from django.urls import path
 from . import views
 from django.contrib.auth.views import LogoutView
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('', views.home, name='home'),
     path('stores/', views.StoreListView.as_view(), name='store_list'),
     path('stores/<uuid:pk>/', views.StoreDetailView.as_view(), name='store_detail'),
+    path('cart/add/', views.add_to_cart, name='add_to_cart'),
     path('cart/', views.cart, name='cart'),
     path('checkout/', views.checkout, name='checkout'),
-    path('cart/add/', views.add_to_cart, name='add_to_cart'),
+    path('login/', auth_views.LoginView.as_view(template_name='account/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    # ถ้ามี signup view ใน views.py
+    path('signup/', views.signup, name='signup'),
+    path('profile/settings/', views.profile_settings, name='profile_settings'),
 ]

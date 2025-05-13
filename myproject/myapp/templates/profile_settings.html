@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}<strong>IMSUK</strong> - ตั้งค่าโปรไฟล์{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <h1 class="text-center text-success mb-4">ตั้งค่าโปรไฟล์</h1>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Profile Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="text-success mb-3">ข้อมูลส่วนตัว</h4>
+            <form method="post" class="mb-4">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="profile">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="first_name" class="form-label">ชื่อ</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="last_name" class="form-label">นามสกุล</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="phone_number" class="form-label">เบอร์โทร</label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number" value="{{ profile.phone_number }}" pattern="\d{10}" title="เบอร์โทรต้องเป็นตัวเลข 10 หลัก">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-imsuk">บันทึกข้อมูลส่วนตัว</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Address Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="text-success mb-3">จัดการที่อยู่</h4>
+            <!-- Address Form -->
+            <form method="post" class="mb-4">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="address">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="label" class="form-label">ชื่อที่อยู่ (เช่น บ้าน, ที่ทำงาน)</label>
+                        <input type="text" class="form-control" id="label" name="label" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="subdistrict" class="form-label">ตำบล/แขวง</label>
+                        <input type="text" class="form-control" id="subdistrict" name="subdistrict" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="district" class="form-label">อำเภอ/เขต</label>
+                        <input type="text" class="form-control" id="district" name="district" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="province" class="form-label">จังหวัด</label>
+                        <input type="text" class="form-control" id="province" name="province" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="postal_code" class="form-label">รหัสไปรษณีย์</label>
+                        <input type="text" class="form-control" id="postal_code" name="postal_code" pattern="\d{5}" title="รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="phone_number" class="form-label">เบอร์โทร</label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number" pattern="\d{10}" title="เบอร์โทรต้องเป็นตัวเลข 10 หลัก" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-imsuk">เพิ่มที่อยู่</button>
+            </form>
+
+            <!-- Address List -->
+            {% if addresses %}
+            <h5 class="mb-3">ที่อยู่ของคุณ</h5>
+            {% for address in addresses %}
+            <div class="card mb-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ address.label }}</strong><br>
+                        {{ address.subdistrict }}, {{ address.district }}, {{ address.province }} {{ address.postal_code }}<br>
+                        เบอร์โทร: {{ address.phone_number }}
+                    </div>
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="delete_address">
+                        <input type="hidden" name="address_id" value="{{ address.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบที่อยู่นี้?');"><i class="fas fa-trash"></i> ลบ</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted">คุณยังไม่มีที่อยู่ที่บันทึกไว้</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Allergy Section -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h4 class="text-success mb-3">จัดการสารก่อภูมิแพ้</h4>
+            <!-- Allergy Form -->
+            <form method="post" class="mb-4">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="allergy">
+                <div class="mb-3">
+                    <label for="allergy_name" class="form-label">ชื่อสารก่อภูมิแพ้ (เช่น แป้งสาลี, ถั่ว)</label>
+                    <input type="text" class="form-control" id="allergy_name" name="allergy_name" required>
+                </div>
+                <button type="submit" class="btn btn-imsuk">เพิ่มสารก่อภูมิแพ้</button>
+            </form>
+
+            <!-- Allergy List -->
+            {% if allergies %}
+            <h5 class="mb-3">สารก่อภูมิแพ้ของคุณ</h5>
+            {% for allergy in allergies %}
+            <div class="card mb-2">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <span>{{ allergy.name }}</span>
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="delete_allergy">
+                        <input type="hidden" name="allergy_id" value="{{ allergy.id }}">
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสารก่อภูมิแพ้นี้?');"><i class="fas fa-trash"></i> ลบ</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-muted">คุณยังไม่มีสารก่อภูมิแพ้ที่บันทึกไว้</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

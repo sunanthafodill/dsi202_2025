@@ -36,14 +36,17 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-white" href="{% url 'account_logout' %}"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</a>
+                            <a class="nav-link text-white" href="{% url 'profile_settings' %}"><i class="fas fa-user-cog"></i> ตั้งค่าโปรไฟล์</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</a>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link text-white btn-imsuk-nav" href="{% url 'account_login' %}"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</a>
+                            <a class="nav-link text-white btn-imsuk-nav" href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-white btn-imsuk-nav" href="{% url 'account_signup' %}"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
+                            <a class="nav-link text-white btn-imsuk-nav" href="{% url 'signup' %}"><i class="fas fa-user-plus"></i> สมัครสมาชิก</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -72,8 +75,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <a href="{% url 'account_login' %}" class="btn btn-imsuk m-2">เข้าสู่ระบบ</a>
-                    <a href="{% url 'account_signup' %}" class="btn btn-imsuk m-2">สมัครสมาชิก</a>
+                    <a href="{% url 'login' %}" class="btn btn-imsuk m-2">เข้าสู่ระบบ</a>
+                    <a href="{% url 'signup' %}" class="btn btn-imsuk m-2">สมัครสมาชิก</a>
                 </div>
             </div>
         </div>
