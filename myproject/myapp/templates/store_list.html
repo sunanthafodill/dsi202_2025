@@ -15,7 +15,7 @@
 
     <!-- Mission Statement -->
     <div class="mission-statement mb-4 text-center">
-        <h2 class="text-success">ค้นพบร้านค้าที่ยั่งยืน</h2>
+        <h2 class="text-success">ร้านค้า</h2>
         <p class="text-muted">เลือกซื้ออาหารจากร้านค้าที่ช่วยลดขยะอาหารและดูแลโลกกับ <strong>IMSUK</strong></p>
     </div>
 
@@ -102,67 +102,79 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('store_list.js loaded'); // ดีบัก: ตรวจสอบว่า JS โหลด
     const forms = document.querySelectorAll('.add-to-cart-form');
     const toastEl = document.getElementById('cartToast');
     const toast = new bootstrap.Toast(toastEl);
     const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
-    const currentCartStoreId = {{ current_cart_store_id|default:0 }};
+    const currentCartStoreId = '{{ current_cart_store_id|default:"" }}'; // ใช้ string เพื่อป้องกัน null
 
     forms.forEach(form => {
         const cartControls = form.querySelector('.cart-controls');
         const quantityHidden = form.querySelector('.quantity-hidden');
-        const storeId = parseInt(form.getAttribute('data-store-id'));
+        const storeId = form.getAttribute('data-store-id');
         const storeName = form.getAttribute('data-store-name');
 
+        console.log('Form initialized for store:', storeName, storeId); // ดีบัก: ตรวจสอบ form
+
         cartControls.addEventListener('click', function(e) {
-            if (e.target.closest('.add-to-cart-btn')) {
-                e.preventDefault();
+            const addButton = e.target.closest('.add-to-cart-btn');
+            if (!addButton) return;
 
-                if (!isAuthenticated) {
-                    toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบเพื่อเพิ่มสินค้าลงตะกร้า';
-                    toastEl.classList.remove('bg-success', 'bg-danger');
-                    toastEl.classList.add('bg-warning');
-                    toast.show();
-                    window.location.href = "{% url 'login' %}";
-                    return;
-                }
-
-                if (currentCartStoreId !== 0 && currentCartStoreId !== storeId) {
-                    toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
-                    toastEl.classList.remove('bg-success', 'bg-danger');
-                    toastEl.classList.add('bg-warning');
-                    toast.show();
-                    return;
-                }
-
-                quantityHidden.value = 1;
-                cartControls.setAttribute('data-added', 'true#pragma once
-');
-                const maxQuantity = quantityHidden.getAttribute('max') || 9999;
-                cartControls.innerHTML = `
-                    <button type="button" class="btn btn-outline-imsuk decrease-quantity" aria-label="ลดจำนวน">-</button>
-                    <input type="number" name="quantity" value="${quantityHidden.value}" min="0" max="${maxQuantity}" class="quantity-input mx-2" aria-label="จำนวน" readonly>
-                    <button type="button" class="btn btn-outline-imsuk increase-quantity" aria-label="เพิ่มจำนวน">+</button>
-                    <button type="submit" class="btn btn-imsuk ms-3 confirm-btn" aria-label="ยืนยันตะกร้า">ยืนยัน</button>
-                `;
-
-                bindQuantityControls();
-            }
-        });
-
-        form.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Add to cart button clicked for store:', storeName); // ดีบัก
 
             if (!isAuthenticated) {
+                console.log('User not authenticated, redirecting to login'); // ดีบัก
                 toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบเพื่อเพิ่มสินค้าลงตะกร้า';
                 toastEl.classList.remove('bg-success', 'bg-danger');
                 toastEl.classList.add('bg-warning');
                 toast.show();
-                window.location.href = "{% url 'login' %}";
+                setTimeout(() => { window.location.href = "{% url 'login' %}"; }, 1500);
                 return;
             }
 
-            if (currentCartStoreId !== 0 && currentCartStoreId !== storeId) {
+            // ตรวจสอบร้านในตะกร้า (ถ้าไม่ว่างและร้านต่างกัน)
+            if (currentCartStoreId && currentCartStoreId !== storeId) {
+                console.log('Cart contains items from another store:', currentCartStoreId); // ดีบัก
+                toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add('bg-warning');
+                toast.show();
+                return;
+            }
+
+            quantityHidden.value = 1;
+            cartControls.setAttribute('data-added', 'true'); // แก้ไข: ลบ #pragma once
+            const maxQuantity = parseInt(quantityHidden.getAttribute('max')) || 9999;
+            console.log('Switching to quantity controls, max:', maxQuantity); // ดีบัก
+
+            cartControls.innerHTML = `
+                <button type="button" class="btn btn-outline-imsuk decrease-quantity" aria-label="ลดจำนวน">-</button>
+                <input type="number" name="quantity" value="${quantityHidden.value}" min="0" max="${maxQuantity}" class="quantity-input mx-2" aria-label="จำนวน" readonly>
+                <button type="button" class="btn btn-outline-imsuk increase-quantity" aria-label="เพิ่มจำนวน">+</button>
+                <button type="submit" class="btn btn-imsuk ms-3 confirm-btn" aria-label="ยืนยันตะกร้า">ยืนยัน</button>
+            `;
+
+            bindQuantityControls(form, cartControls);
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted for store:', storeName, 'Quantity:', quantityHidden.value); // ดีบัก
+
+            if (!isAuthenticated) {
+                console.log('User not authenticated on submit'); // ดีบัก
+                toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบเพื่อเพิ่มสินค้าลงตะกร้า';
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add('bg-warning');
+                toast.show();
+                setTimeout(() => { window.location.href = "{% url 'login' %}"; }, 1500);
+                return;
+            }
+
+            if (currentCartStoreId && currentCartStoreId !== storeId) {
+                console.log('Cart contains items from another store on submit:', currentCartStoreId); // ดีบัก
                 toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
                 toastEl.classList.remove('bg-success', 'bg-danger');
                 toastEl.classList.add('bg-warning');
@@ -173,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const confirmBtn = cartControls.querySelector('.confirm-btn');
             confirmBtn.disabled = true;
             confirmBtn.textContent = 'กำลังยืนยัน...';
+            console.log('Sending AJAX request to add_to_cart'); // ดีบัก
 
             const formData = new FormData(this);
             fetch("{% url 'add_to_cart' %}", {
@@ -184,12 +197,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .then(response => {
+                console.log('AJAX response status:', response.status); // ดีบัก
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
+                console.log('AJAX response data:', data); // ดีบัก
                 toastEl.querySelector('.toast-body').textContent = data.message;
                 toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
                 toastEl.classList.add(data.success ? (parseInt(quantityHidden.value) === 0 ? 'bg-danger' : 'bg-success') : 'bg-danger');
@@ -212,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error adding to cart:', error);
+                console.error('Error adding to cart:', error); // ดีบัก
                 toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการอัปเดตตะกร้า กรุณาลองใหม่';
                 toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
                 toastEl.classList.add('bg-danger');
@@ -226,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        function bindQuantityControls() {
+        function bindQuantityControls(form, cartControls) {
             const quantityInput = cartControls.querySelector('.quantity-input');
             const confirmBtn = cartControls.querySelector('.confirm-btn');
 
@@ -245,6 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     quantityInput.value = quantity + 1;
                     quantityHidden.value = quantityInput.value;
                     updateConfirmButton();
+                    console.log('Increased quantity to:', quantityInput.value); // ดีบัก
                 }
             });
 
@@ -254,6 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     quantityInput.value = quantity - 1;
                     quantityHidden.value = quantityInput.value;
                     updateConfirmButton();
+                    console.log('Decreased quantity to:', quantityInput.value); // ดีบัก
                 }
             });
         }

@@ -251,6 +251,75 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
 }
 
+/* Cart Image Styles */
+.store-image-container {
+    width: 150px;
+    height: 150px;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 2px solid var(--imsuk-secondary);
+    margin: 0 auto;
+}
+
+.store-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.store-image:hover {
+    transform: scale(1.05);
+}
+
+/* Accordion for Order History */
+.accordion-item {
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #FFFFFF;
+}
+
+.accordion-button {
+    background-color: var(--imsuk-secondary);
+    color: var(--imsuk-primary);
+    font-weight: 600;
+    padding: 1.25rem;
+    border-radius: 10px !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--imsuk-primary);
+    color: white;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    outline: 2px solid var(--imsuk-secondary);
+}
+
+.accordion-body {
+    background-color: #FFFFFF;
+    padding: 1.5rem;
+}
+
+.badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+}
+
+.delete-order {
+    transition: all 0.3s ease;
+}
+
+.delete-order:hover {
+    background-color: var(--imsuk-accent);
+    color: white;
+    border-color: var(--imsuk-accent);
+    transform: scale(1.05);
+}
+
 /* Buttons */
 .btn-imsuk {
     background-color: var(--imsuk-secondary);
@@ -409,6 +478,11 @@ h1, h2, h3, h4, h5, h6 {
         max-height: 300px;
     }
 
+    .store-image-container {
+        width: 100px;
+        height: 100px;
+    }
+
     .additional-image {
         width: 100px;
         height: 100px;
@@ -470,6 +544,15 @@ h1, h2, h3, h4, h5, h6 {
     .imsuk-logo-footer {
         height: 20px;
     }
+
+    .accordion-button {
+        padding: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .accordion-body {
+        padding: 1rem;
+    }
 }
 
 @media (max-width: 576px) {
@@ -508,5 +591,41 @@ h1, h2, h3, h4, h5, h6 {
 
     .imsuk-logo-footer {
         height: 18px;
+    }
+}
+/* IMSUK Bold Style */
+.imsuk-bold {
+    font-weight: 900; /* น้ำหนักสูงสุดของ Prompt */
+    -webkit-text-stroke: 0.6px #3F8240; /* ขอบตัวอักษรสีเขียวเข้ม */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* เงาเข้มเพื่อเพิ่มมิติ */
+    font-size: 1.25em; /* ขนาดใหญ่ขึ้นเล็กน้อย */
+    color: #EFACA5; /* สีชมพูอ่อนเพื่อความเด่น */
+    letter-spacing: 0.03em; /* ระยะห่างตัวอักษร */
+    display: inline-block; /* เพื่อให้ stroke และ animation ทำงาน */
+    animation: glow 1.5s ease-in-out infinite alternate; /* อนิเมชันเรืองแสง */
+}
+
+/* อนิเมชัน glow */
+@keyframes glow {
+    from {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 5px rgba(239, 172, 165, 0.5);
+    }
+    to {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(239, 172, 165, 0.8);
+    }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .imsuk-bold {
+        font-size: 1.15em; /* ลดขนาดในแท็บเล็ต */
+        -webkit-text-stroke: 0.5px #3F8240; /* ขอบบางลง */
+    }
+}
+
+@media (max-width: 576px) {
+    .imsuk-bold {
+        font-size: 1.05em; /* ลดขนาดในมือถือ */
+        -webkit-text-stroke: 0.4px #3F8240; /* ขอบบางลง */
     }
 }

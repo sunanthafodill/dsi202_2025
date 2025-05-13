@@ -3,27 +3,43 @@
 {% block title %}<strong>IMSUK</strong> - หน้าแรก{% endblock %}
 {% block content %}
 <!-- Welcome Section -->
+<!-- Welcome Section -->
 <div class="welcome-section text-center my-5 animate__animated animate__fadeIn">
-    <img src="{% static 'images/imsuk_logoja.png' %}" alt="IMSUK Logo" class="imsuk-logo-home mb-3">
-    <h1 class="display-4 text-success"><strong>IMSUK</strong>: {{ welcome_message }}</h1>
-    <p class="lead text-muted">{{ mission_statement }}</p>
-    <a href="{% url 'store_list' %}" class="btn btn-imsuk btn-lg animate__animated animate__pulse animate__infinite">สำรวจร้านค้าที่ยั่งยืน</a>
+    <img src="{% static 'images/imsuk_logoja.png' %}" alt="โลโก้ IMSUK" class="imsuk-logo-home mb-3">
+    <h1 class="display-4 text-success">อิ่มสุข ไปกับ <span class="imsuk-bold">IMSUK</span></h1>
+    <p class="lead text-muted">เชื่อมโยงอาหารคุณภาพ ราคาย่อมเยา เพื่อลดขยะอาหารและสร้างโลกยั่งยืน</p>
+    <a href="{% url 'store_list' %}" class="btn btn-imsuk btn-lg animate__animated animate__pulse animate__infinite">
+      <i class="fas fa-store me-2"></i>ค้นหาอาหารใกล้คุณ
+    </a>
 </div>
 
 <!-- Banner Section -->
-<div class="banner-section text-center mb-5 animate__animated animate__zoomIn">
-    <img src="{% static 'images/imsuk_banner.jpg' %}" class="img-fluid rounded shadow-sm" alt="ภารกิจ IMSUK" onerror="this.src='{% static 'images/placeholder_banner.jpg' %}'">
+<div class="banner-section text-center mb-5 animate__animated animate__zoomIn position-relative">
+  <div class="banner-overlay">
+    <h2 class="text-accent">ลดสูงสุด 40%! อร่อย คุณภาพดี ราคาเป็นมิตร</h2>
+  </div>
+  <img src="{% static 'images/imsuk2.png' %}" class="img-fluid rounded shadow-sm" alt="อาหารจาก IMSUK">
 </div>
 
 <!-- Call to Action -->
 <div class="cta-section text-center py-5 bg-light rounded animate__animated animate__fadeInUp">
-    <h3 class="text-success">ร่วมเปลี่ยนโลกกับ <strong>IMSUK</strong></h3>
-    <p class="text-muted">ทุกการซื้อของคุณช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น</p>
-    {% if user.is_authenticated %}
-        <a href="{% url 'store_list' %}" class="btn btn-imsuk m-2">เริ่มต้นเลย</a>
-    {% else %}
-        <a href="{% url 'account_signup' %}" class="btn btn-imsuk m-2">สมัครเลย</a>
-        <a href="{% url 'account_login' %}" class="btn btn-imsuk m-2">เข้าสู่ระบบ</a>
-    {% endif %}
+  <h3 class="text-success">ร่วมลดขยะอาหารกับ <strong>IMSUK</strong></h3>
+  <p class="text-muted">ทุกการซื้อของคุณช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น</p>
+  {% if user.is_authenticated %}
+    <a href="{% url 'store_list' %}" class="btn btn-imsuk m-2"><i class="fas fa-utensils me-2"></i>เริ่มต้นเลย</a>
+  {% else %}
+    <a href="{% url 'account_signup' %}" class="btn btn-imsuk m-2"><i class="fas fa-user-plus me-2"></i>สมัครเลย</a>
+    <a href="{% url 'account_login' %}" class="btn btn-outline-imsuk m-2"><i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ</a>
+  {% endif %}
+</div>
+
+<!-- About Us Section -->
+<div class="about-section text-center py-5 my-5 animate__animated animate__fadeInUp">
+  <h2 class="text-success mb-4">เกี่ยวกับ <strong>IMSUK</strong></h2>
+  <p class="text-muted mx-auto" style="max-width: 600px;">
+    <strong>IMSUK</strong> เกิดจากความห่วงใย (Care) ความเห็นอกเห็นใจ (Compassion) ต่อโลกและผู้คน เราเชื่อมโยง (Connection) ร้านค้าและผู้บริโภคผ่านอาหารคุณภาพ (Nutrition) ที่บำรุงทั้งกายและใจ (Nourishment) และแบ่งปัน (Sharing) โอกาส
+    เพื่อลดขยะอาหาร สร้างโลกที่ยั่งยืน และเชื่อมโยงทุกคนผ่านอาหารคุณภาพ
+  </p>
+  <img src="{% static 'images/imsuk1.png' %}" alt="ที่มาโลโก้ IMSUK" class="img-fluid rounded shadow-sm my-4" style="max-width: 100%; height: auto;">
 </div>
 {% endblock %}

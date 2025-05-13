@@ -6,23 +6,27 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import Store, Cart, Order, Address, Allergy, Profile
+from .models import Store, Cart, Order, Address, Allergy, Profile, OrderItem
 from .forms import AddressForm, AllergyForm, ProfileForm
 from django.contrib.auth.forms import UserCreationForm
+from uuid import uuid4
+from django.urls import reverse
 
 def signup(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            Profile.objects.create(user=user)  # สร้าง Profile อัตโนมัติเมื่อสมัครสมาชิก
+            Profile.objects.create(user=user)
             messages.success(request, 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ.')
             return redirect('login')
         else:
             messages.error(request, 'เกิดข้อผิดพลาด กรุณาตรวจสอบข้อมูล.')
     else:
         form = UserCreationForm()
-    return render(request, 'account/signup.html', {'form': form})
+    context = {'form': form}
+    context.update(base_context(request))
+    return render(request, 'account/signup.html', context)
 
 def base_context(request):
     cart_count = 0
@@ -129,7 +133,6 @@ def add_to_cart(request):
         messages.error(request, "จำนวนที่เลือกเกินสต็อกที่มี")
         return redirect('store_list')
 
-    # ตรวจสอบว่ามีร้านอื่นในตะกร้าหรือไม่
     cart_item = Cart.objects.filter(user=request.user).first()
     if cart_item and str(cart_item.store.id) != store_id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -179,10 +182,10 @@ def cart(request):
     shipping_fee = 9.0
     total_with_shipping = total_price + shipping_fee
     addresses = Address.objects.filter(user=request.user)
+    cart_count = sum(item.quantity for item in cart_items)
 
     for item in cart_items:
         item.allergens = item.store.allergen_ingredients.split(',') if item.store.allergen_ingredients else []
-        # ตรวจสอบว่ามีสารก่อภูมิแพ้ที่ตรงกับของผู้ใช้หรือไม่
         item.has_allergy_warning = False
         if item.allergens:
             allergens_list = [allergen.strip() for allergen in item.allergens if allergen.strip()]
@@ -206,7 +209,6 @@ def cart(request):
                     return JsonResponse({'success': False, 'message': 'จำนวนที่เลือกเกินสต็อกที่มี'})
                 messages.error(request, "จำนวนที่เลือกเกินสต็อกที่มี")
                 return redirect('cart')
-            # ตรวจสอบร้านในตะกร้า
             cart_item = Cart.objects.filter(user=request.user).first()
             if cart_item and str(cart_item.store.id) != store_id:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -232,14 +234,15 @@ def cart(request):
                     message = f"อัปเดตจำนวน {store.name} เรียบร้อย"
             else:
                 message = f"เพิ่ม {store.name} ลงตะกร้าเรียบร้อย"
+            cart_count = sum(item.quantity for item in Cart.objects.filter(user=request.user))
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': message, 'cart_count': cart_count})
             messages.success(request, message)
         except (ValueError, Store.DoesNotExist) as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'message': f'คำขอไม่ถูกต้อง: {str(e)}'})
             messages.error(request, f"คำขอไม่ถูกต้อง: {str(e)}")
 
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': message})
         return redirect('cart')
 
     context = {
@@ -248,6 +251,7 @@ def cart(request):
         'shipping_fee': shipping_fee,
         'total_with_shipping': total_with_shipping,
         'addresses': addresses,
+        'cart_count': cart_count,
     }
     return render(request, 'cart.html', context)
 
@@ -261,8 +265,11 @@ def checkout(request):
     total_price = sum(item.total_discounted_price or 0 for item in cart_items)
     shipping_fee = 9.0
     total_with_shipping = total_price + shipping_fee
+    cart_count = sum(item.quantity for item in cart_items)
 
     if not cart_items:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'ตะกร้าของคุณว่างเปล่า'}, status=400)
         messages.warning(request, "ตะกร้าของคุณว่างเปล่า กรุณาเพิ่มสินค้าก่อนดำเนินการชำระเงิน")
         return redirect('store_list')
 
@@ -271,8 +278,12 @@ def checkout(request):
     if request.method == 'POST':
         address_id = request.POST.get('address_id')
         payment_method = request.POST.get('payment_method')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        checkout_action = request.headers.get('X-Checkout-Action')
 
         if not address_id or not payment_method:
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'กรุณาเลือกที่อยู่จัดส่งและช่องทางชำระเงิน'}, status=400)
             messages.error(request, "กรุณาเลือกที่อยู่จัดส่งและช่องทางชำระเงิน")
             return render(request, 'cart.html', {
                 'cart_items': cart_items,
@@ -280,11 +291,14 @@ def checkout(request):
                 'shipping_fee': shipping_fee,
                 'total_with_shipping': total_with_shipping,
                 'addresses': addresses,
+                'cart_count': cart_count,
             })
 
         try:
             delivery_address = Address.objects.get(id=address_id, user=request.user)
         except Address.DoesNotExist:
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': 'ที่อยู่จัดส่งไม่ถูกต้อง'}, status=400)
             messages.error(request, "ที่อยู่จัดส่งไม่ถูกต้อง")
             return render(request, 'cart.html', {
                 'cart_items': cart_items,
@@ -292,43 +306,94 @@ def checkout(request):
                 'shipping_fee': shipping_fee,
                 'total_with_shipping': total_with_shipping,
                 'addresses': addresses,
+                'cart_count': cart_count,
             })
 
-        order = Order.objects.create(
-            buyer=request.user,
-            delivery_address=delivery_address,
-            total_price=total_price,
-            shipping_fee=shipping_fee,
-            total_with_shipping=total_with_shipping,
-            payment_method=payment_method,
-        )
+        if is_ajax and checkout_action == 'validate' and payment_method == 'promptpay':
+            qr_code_url = 'https://via.placeholder.com/200'
+            return JsonResponse({
+                'success': True,
+                'total_with_shipping': float(total_with_shipping),
+                'qr_code_url': qr_code_url
+            })
 
-        for item in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                store=item.store,
-                quantity=item.quantity,
-                price=item.store.discounted_price,
-                note=item.note,
+        if is_ajax and checkout_action == 'confirm' and payment_method == 'promptpay':
+            order = Order.objects.create(
+                id=uuid4(),
+                buyer=request.user,
+                delivery_address=delivery_address,
+                total_price=total_price,
+                shipping_fee=shipping_fee,
+                total_with_shipping=total_with_shipping,
+                payment_method=payment_method,
+                status='confirmed'
             )
 
-        cart_items.delete()
-        messages.success(request, f"สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}")
-        return render(request, 'checkout_success.html', {'order': order})
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    store=item.store,
+                    quantity=item.quantity,
+                    price=item.store.discounted_price,
+                    note=item.note,
+                )
 
-    return render(request, 'cart.html', {
+            cart_items.delete()
+            return JsonResponse({
+                'success': True,
+                'message': f'สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}',
+                'redirect_url': reverse('checkout_success', kwargs={'order_id': str(order.id)})
+            })
+
+        if payment_method != 'promptpay':
+            order = Order.objects.create(
+                id=uuid4(),
+                buyer=request.user,
+                delivery_address=delivery_address,
+                total_price=total_price,
+                shipping_fee=shipping_fee,
+                total_with_shipping=total_with_shipping,
+                payment_method=payment_method,
+                status='confirmed' if payment_method == 'cash' else 'pending'
+            )
+
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    store=item.store,
+                    quantity=item.quantity,
+                    price=item.store.discounted_price,
+                    note=item.note,
+                )
+
+            cart_items.delete()
+            messages.success(request, f"สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}")
+            context = {'order': order, 'cart_count': 0}
+            return render(request, 'checkout_success.html', context)
+
+        messages.error(request, "กรุณาใช้ช่องทางชำระเงินที่ถูกต้อง")
+        return redirect('cart')
+
+    context = {
         'cart_items': cart_items,
         'total_price': total_price,
         'shipping_fee': shipping_fee,
         'total_with_shipping': total_with_shipping,
         'addresses': addresses,
-    })
+        'cart_count': cart_count,
+    }
+    return render(request, 'cart.html', context)
+
+@login_required(login_url='login')
+def checkout_success(request, order_id):
+    order = get_object_or_404(Order, id=order_id, buyer=request.user)
+    context = {'order': order}
+    context.update(base_context(request))
+    return render(request, 'checkout_success.html', context)
 
 @login_required
 def profile_settings(request):
-    # ตรวจสอบหรือสร้าง Profile ถ้ายังไม่มี
     profile, created = Profile.objects.get_or_create(user=request.user)
-    
     addresses = Address.objects.filter(user=request.user)
     allergies = Allergy.objects.filter(user=request.user)
 
@@ -398,4 +463,24 @@ def profile_settings(request):
         'allergy_form': allergy_form,
         'profile_form': profile_form,
     }
+    context.update(base_context(request))
     return render(request, 'profile_settings.html', context)
+
+@login_required(login_url='login')
+def order_history(request):
+    orders = Order.objects.filter(buyer=request.user).order_by('-order_time')
+    context = {
+        'orders': orders,
+    }
+    context.update(base_context(request))
+    return render(request, 'order_history.html', context)
+
+@login_required(login_url='login')
+def delete_order(request, order_id):
+    try:
+        order = Order.objects.get(id=order_id, buyer=request.user)
+        order.delete()
+        messages.success(request, 'ลบคำสั่งซื้อเรียบร้อยแล้ว')
+    except Order.DoesNotExist:
+        messages.error(request, 'ไม่พบคำสั่งซื้อ')
+    return redirect('order_history')

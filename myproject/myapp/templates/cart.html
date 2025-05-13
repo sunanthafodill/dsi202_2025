@@ -21,12 +21,14 @@
         <div class="cart-item card mb-3 shadow-sm">
             <div class="row g-0 align-items-center">
                 <div class="col-md-3 col-4">
-                    <img src="{{ item.store.store_image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid rounded-start store-image" alt="{{ item.store.name }}">
+                    <div class="store-image-container">
+                        <img src="{{ item.store.store_image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid store-image" alt="{{ item.store.name }}">
+                    </div>
                 </div>
                 <div class="col-md-9 col-8">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0">{{ item.store.name }}</h5>
+                            <h5 class="card-title mb-0 fw-bold">{{ item.store.name }}</h5>
                             <button class="btn btn-sm btn-outline-danger delete-item" data-store-id="{{ item.store.id }}" aria-label="ลบรายการ"><i class="fas fa-trash"></i></button>
                         </div>
                         <p class="card-text text-muted">ราคา: {{ item.store.discounted_price|floatformat:0 }} บาท</p>
@@ -58,7 +60,7 @@
         {% endfor %}
         <div class="cart-summary card p-4 mt-4 shadow-sm">
             <h4 class="mb-3">สรุปยอด</h4>
-            <div class="d-flex justify-content-between mb-2">
+            <div class="d-flex justify-content-upon-between mb-2">
                 <span>ค่าสินค้า:</span>
                 <span>{{ total_price|floatformat:0 }} บาท</span>
             </div>
@@ -89,11 +91,11 @@
             </div>
             <div class="d-flex justify-content-between align-items-center">
                 <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#clearCartModal" aria-label="ล้างตะกร้า">ล้างตะกร้า</button>
-                <form method="post" action="{% url 'checkout' %}" class="d-inline">
+                <form id="checkout-form" method="post" action="{% url 'checkout' %}" class="d-inline">
                     {% csrf_token %}
                     <input type="hidden" name="payment_method" id="payment_method_hidden">
                     <input type="hidden" name="address_id" id="address_id_hidden">
-                    <button type="submit" class="btn btn-imsuk" aria-label="ดำเนินการชำระเงิน">ดำเนินการชำระเงิน</button>
+                    <button type="submit" class="btn btn-imsuk checkout-btn" aria-label="ดำเนินการชำระเงิน">ดำเนินการชำระเงิน</button>
                 </form>
             </div>
         </div>
@@ -121,6 +123,28 @@
             </div>
         </div>
     </div>
+
+    <!-- PromptPay QR Code Modal -->
+    <div class="modal fade" id="promptpayModal" tabindex="-1" aria-labelledby="promptpayModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="promptpayModalLabel">ชำระเงินด้วย PromptPay</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p>กรุณาสแกน QR Code เพื่อชำระเงิน</p>
+                    <p class="fw-bold">ยอดชำระ: <span id="promptpay-amount">{{ total_with_shipping|floatformat:0 }}</span> บาท</p>
+                    <img id="promptpay-qr" src="https://via.placeholder.com/200" alt="PromptPay QR Code" class="img-fluid mb-3">
+                    <p>เวลาคงเหลือ: <span id="countdown">03:00</span></p>
+                    <p class="text-muted">กรุณายืนยันการชำระเงินภายในเวลาที่กำหนด มิฉะนั้นต้องเริ่มกระบวนการใหม่</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-confirm-payment confirm-payment-btn" data-amount="{{ total_with_shipping|floatformat:0 }}">ยืนยันการชำระเงิน</button>
+                </div>
+            </div>
+        </div>
+    </div>
     {% else %}
     <div class="text-center py-5">
         <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
@@ -130,10 +154,39 @@
     {% endif %}
 </div>
 
+<style>
+.promptpay-modal .modal-content {
+    border-radius: 10px;
+}
+.promptpay-modal .modal-header {
+    background-color: var(--imsuk-primary);
+    color: white;
+}
+#promptpay-qr {
+    max-width: 200px;
+    border: 2px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+}
+#countdown {
+    font-weight: bold;
+    color: #dc3545;
+}
+.btn-confirm-payment {
+    background-color: #FF69B4;
+    color: white;
+    border: none;
+}
+.btn-confirm-payment:hover {
+    background-color: #e55a9b;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const toastEl = document.getElementById('cartToast');
     const toast = new bootstrap.Toast(toastEl);
+    let countdownInterval = null;
 
     {% if messages %}
     {% for message in messages %}
@@ -179,12 +232,167 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.querySelector('form[action="{% url 'checkout' %}"]').addEventListener('submit', function(e) {
+    const checkoutForm = document.getElementById('checkout-form');
+    const checkoutBtn = document.querySelector('.checkout-btn');
+    const promptpayModal = new bootstrap.Modal(document.getElementById('promptpayModal'));
+
+    checkoutForm.addEventListener('submit', function(e) {
+        e.preventDefault();
         const paymentMethod = document.getElementById('payment_method').value;
         const addressId = document.getElementById('address_id').value;
         document.getElementById('payment_method_hidden').value = paymentMethod;
         document.getElementById('address_id_hidden').value = addressId;
+
+        if (!addressId) {
+            toastEl.querySelector('.toast-body').textContent = 'กรุณาเลือกที่อยู่จัดส่ง';
+            toastEl.classList.remove('bg-success', 'bg-warning');
+            toastEl.classList.add('bg-danger');
+            toast.show();
+            return;
+        }
+
+        if (paymentMethod === 'promptpay') {
+            checkoutBtn.disabled = true;
+            checkoutBtn.textContent = 'กำลังดำเนินการ...';
+
+            // ตรวจสอบข้อมูลก่อนแสดง QR Code
+            const formData = new FormData(checkoutForm);
+            fetch("{% url 'checkout' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-Checkout-Action': 'validate'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // แสดง modal พร้อม QR Code
+                    document.getElementById('promptpay-amount').textContent = data.total_with_shipping;
+                    document.getElementById('promptpay-qr').src = data.qr_code_url || 'https://via.placeholder.com/200';
+                    startCountdown();
+                    promptpayModal.show();
+
+                    // เมื่อปิด modal
+                    document.getElementById('promptpayModal').addEventListener('hidden.bs.modal', function() {
+                        clearInterval(countdownInterval);
+                        toastEl.querySelector('.toast-body').textContent = 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่';
+                        toastEl.classList.remove('bg-success', 'bg-danger');
+                        toastEl.classList.add('bg-warning');
+                        toast.show();
+                        checkoutBtn.disabled = false;
+                        checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+                    }, { once: true });
+                } else {
+                    toastEl.querySelector('.toast-body').textContent = data.message || 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล';
+                    toastEl.classList.remove('bg-success', 'bg-warning');
+                    toastEl.classList.add('bg-danger');
+                    toast.show();
+                    checkoutBtn.disabled = false;
+                    checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+                }
+            })
+            .catch(error => {
+                console.error('Error during checkout validation:', error);
+                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการดำเนินการชำระเงิน กรุณาลองใหม่';
+                toastEl.classList.remove('bg-success', 'bg-warning');
+                toastEl.classList.add('bg-danger');
+                toast.show();
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+            });
+        } else {
+            // สำหรับช่องทางชำระเงินอื่น ๆ ส่งฟอร์มตามปกติ
+            checkoutForm.submit();
+        }
     });
+
+    // จัดการปุ่มยืนยันการชำระเงินใน modal
+    document.querySelector('.confirm-payment-btn').addEventListener('click', function() {
+        const amount = this.getAttribute('data-amount');
+        const formData = new FormData(checkoutForm);
+        formData.append('confirm_payment', 'true');
+
+        this.disabled = true;
+        this.textContent = 'กำลังยืนยัน...';
+
+        fetch("{% url 'checkout' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-Checkout-Action': 'confirm'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                clearInterval(countdownInterval);
+                promptpayModal.hide();
+                toastEl.querySelector('.toast-body').textContent = data.message;
+                toastEl.classList.remove('bg-danger', 'bg-warning');
+                toastEl.classList.add('bg-success');
+                toast.show();
+                window.location.href = data.redirect_url;
+            } else {
+                toastEl.querySelector('.toast-body').textContent = data.message || 'การชำระเงินล้มเหลว';
+                toastEl.classList.remove('bg-success', 'bg-warning');
+                toastEl.classList.add('bg-danger');
+                toast.show();
+                this.disabled = false;
+                this.textContent = 'ยืนยันการชำระเงิน';
+            }
+        })
+        .catch(error => {
+            console.error('Error confirming payment:', error);
+            toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการยืนยันการชำระเงิน';
+            toastEl.classList.remove('bg-success', 'bg-warning');
+            toastEl.classList.add('bg-danger');
+            toast.show();
+            this.disabled = false;
+            this.textContent = 'ยืนยันการชำระเงิน';
+        });
+    });
+
+    function startCountdown() {
+        let timeLeft = 180; // 3 นาที (180 วินาที)
+        const countdownEl = document.getElementById('countdown');
+
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+        }
+
+        countdownInterval = setInterval(() => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            timeLeft--;
+
+            if (timeLeft < 0) {
+                clearInterval(countdownInterval);
+                promptpayModal.hide();
+                toastEl.querySelector('.toast-body').textContent = 'หมดเวลาการชำระเงิน กรุณาลองใหม่';
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add('bg-warning');
+                toast.show();
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+            }
+        }, 1000);
+    }
 
     function updateCart(storeId, quantity, note, input) {
         const formData = new FormData();

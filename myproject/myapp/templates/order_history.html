@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}<strong>IMSUK</strong> - ประวัติคำสั่งซื้อ{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="orderToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: #FF69B4;">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <h1 class="text-center mb-4 text-success animate__animated animate__fadeIn">ประวัติคำสั่งซื้อ</h1>
+
+    {% if orders %}
+    <div class="accordion" id="orderAccordion">
+        {% for order in orders %}
+        <div class="accordion-item shadow-sm mb-3 animate__animated animate__fadeInUp" style="animation-delay: {{ forloop.counter0|floatformat:1 }}s;">
+            <h2 class="accordion-header" id="heading{{ order.id }}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ order.id }}" aria-expanded="false" aria-controls="collapse{{ order.id }}">
+                    <div class="d-flex justify-content-between w-100">
+                        <span><strong>หมายเลขคำสั่งซื้อ: {{ order.id }}</strong></span>
+                        <span>{{ order.order_time|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapse{{ order.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ order.id }}" data-bs-parent="#orderAccordion">
+                <div class="accordion-body">
+                    <p><strong>สถานะ:</strong> <span class="badge bg-{% if order.status == 'completed' %}success{% elif order.status == 'pending' %}warning{% else %}danger{% endif %}">{{ order.get_status_display }}</span></p>
+                    <p><strong>ช่องทางชำระเงิน:</strong> {{ order.get_payment_method_display }}</p>
+                    <p><strong>ที่อยู่จัดส่ง:</strong> {{ order.delivery_address.label }} - {{ order.delivery_address.address_line }}</p>
+
+                    <h6 class="mt-3">รายการสั่งซื้อ</h6>
+                    <div class="row">
+                        {% for item in order.items.all %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <p class="fw-bold mb-1">{{ item.store.name }}</p>
+                                    <p class="mb-1">จำนวน: {{ item.quantity }}</p>
+                                    <p class="mb-1">ราคา: {{ item.price|floatformat:0 }} บาท</p>
+                                    <p class="mb-1">รวม: {{ item.total_price|floatformat:0 }} บาท</p>
+                                    {% if item.note %}
+                                    <p class="mb-0 text-muted">โน้ต: {{ item.note }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <p class="mt-3"><strong>ค่าสินค้า:</strong> {{ order.total_price|floatformat:0 }} บาท</p>
+                    <p><strong>ค่าส่ง:</strong> {{ order.shipping_fee|floatformat:0 }} บาท</p>
+                    <p class="fw-bold"><strong>ยอดรวม:</strong> {{ order.total_with_shipping|floatformat:0 }} บาท</p>
+
+                    <div class="text-end mt-3">
+                        <button class="btn btn-outline-danger btn-sm delete-order" data-order-id="{{ order.id }}" aria-label="ลบคำสั่งซื้อ">ลบคำสั่งซื้อ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 animate__animated animate__fadeIn">
+        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+        <p class="text-muted">คุณยังไม่มีคำสั่งซื้อ</p>
+        <a href="{% url 'store_list' %}" class="btn btn-imsuk">ไปที่ร้านค้า</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.accordion-item {
+    background-color: #FFFFFF; /* เปลี่ยนสีกรอบเป็นสีขาว */
+    border: 1px solid #dee2e6; /* ขอบสีเทาอ่อน */
+    border-radius: 10px;
+}
+.accordion-button {
+    background-color: #FFFFFF; /* ปุ่ม accordion เป็นสีขาว */
+    color: #000;
+}
+.accordion-button:not(.collapsed) {
+    background-color: #f8f9fa; /* สีพื้นหลังเมื่อเปิด */
+    color: #000;
+}
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+.card {
+    border-radius: 8px;
+}
+.btn-imsuk {
+    background-color: var(--imsuk-primary);
+    color: white;
+}
+.btn-imsuk:hover {
+    background-color: #005a4b;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toastEl = document.getElementById('orderToast');
+    const toast = new bootstrap.Toast(toastEl, { delay: 1000 }); // แสดง 1 วินาที
+
+    {% if messages %}
+    {% for message in messages %}
+        {% if message != "ลบคำสั่งซื้อเรียบร้อยแล้ว" %}
+        toastEl.querySelector('.toast-body').textContent = "{{ message }}";
+        toastEl.style.backgroundColor = '#FF69B4'; // สีชมพู
+        toast.show();
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    document.querySelectorAll('.delete-order').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อนี้?')) return;
+
+            const orderId = this.getAttribute('data-order-id');
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            fetch(`/order/delete/${orderId}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const accordionItem = button.closest('.accordion-item');
+                    accordionItem.classList.add('animate__animated', 'animate__fadeOut');
+                    setTimeout(() => {
+                        accordionItem.remove();
+                        if (!document.querySelector('.accordion-item')) {
+                            location.reload();
+                        }
+                    }, 500); // รอแอนิเมชัน fadeOut เสร็จ
+                } else {
+                    toastEl.querySelector('.toast-body').textContent = data.message;
+                    toastEl.style.backgroundColor = '#FF69B4';
+                    toast.show();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการลบคำสั่งซื้อ';
+                toastEl.style.backgroundColor = '#FF69B4';
+                toast.show();
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

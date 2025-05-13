@@ -15,4 +15,7 @@ urlpatterns = [
     # ถ้ามี signup view ใน views.py
     path('signup/', views.signup, name='signup'),
     path('profile/settings/', views.profile_settings, name='profile_settings'),
+    path('orders/', views.order_history, name='order_history'),
+    path('checkout/success/<uuid:order_id>/', views.checkout_success, name='checkout_success'),
+    path('order/delete/<uuid:order_id>/', views.delete_order, name='delete_order'),
 ]
