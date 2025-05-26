@@ -1,19 +1,24 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.utils import timezone
-from django.views.generic import ListView, DetailView
-from django.http import JsonResponse
+from django.views.generic import ListView
+from django.http import JsonResponse, Http404, HttpResponseBadRequest
 from django.contrib import messages
-from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .models import Store, Cart, Order, Address, Allergy, Profile, OrderItem, Review
+from .models import Store, Cart, Order, Address, Allergy, Review, Profile, OrderItem
 from .forms import AddressForm, AllergyForm, ProfileForm
 from django.contrib.auth.forms import UserCreationForm
 from uuid import uuid4
 from django.urls import reverse
+from django.db.models import Sum, F, Q
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.cache import never_cache
+import logging
+
+logger = logging.getLogger(__name__)
 
 def signup(request):
     if request.method == 'POST':
@@ -49,128 +54,213 @@ def base_context(request):
 def home(request):
     context = {
         'welcome_message': "ยินดีต้อนรับสู่ IMSUK",
-        'mission_statement': "เรามุ่งมั่นลดขยะอาหารและต่อสู้กับภาวะโลกร้อนด้วยความเห็นอกเห็นใจต่อโลก ผู้คน และร้านอาหาร",
+        'mission_statement': "เรามุ่งมั่นลดขยะอาหารและต่อสู้เพื่อโลกที่ยั่งยืนด้วยความเห็นใจต่อผู้คนและร้านอาหาร",
     }
     context.update(base_context(request))
     return render(request, 'home.html', context)
 
+logger = logging.getLogger(__name__)
+
 class StoreListView(ListView):
     model = Store
     template_name = 'store_list.html'
-    context_object_name = 'stores'
-    paginate_by = 9
+    context_object_name = 'page_obj'
+    paginate_by = 20
 
     def get_queryset(self):
-        queryset = Store.objects.filter(is_active=True)
-        current_time = timezone.localtime(timezone.now()).time()
-        queryset = queryset.filter(
-            available_from__lte=current_time,
-            available_until__gte=current_time
-        )
-        
+        queryset = Store.objects.filter(is_active=True, quantity_available__gt=0)
         search_query = self.request.GET.get('search', '').strip()
+        sort = self.request.GET.get('sort', '')
+
         if search_query:
-            queryset = queryset.filter(
-                Q(name__icontains=search_query) |
-                Q(description__icontains=search_query)
-            )
+            try:
+                queryset = queryset.filter(
+                    Q(name__icontains=search_query) |
+                    Q(description__icontains=search_query) |
+                    Q(additional_details__icontains=search_query)
+                ).distinct()
+            except Exception as e:
+                logger.error(f"Search error: {str(e)}, query={search_query}")
+                queryset = queryset.none()
 
-        # prefetch reviews (ทั้งหมด) แล้วไป slice ใน template
-        queryset = queryset.prefetch_related(
-            Prefetch('reviews', queryset=Review.objects.order_by('-review_date'))
-        )
+        if sort:
+            try:
+                if sort == 'price_asc':
+                    queryset = queryset.annotate(
+                        calc_discounted_price=F('price') * (1 - F('discount_percentage') / 100.0)
+                    ).order_by('calc_discounted_price', 'name')
+                elif sort == 'price_desc':
+                    queryset = queryset.annotate(
+                        calc_discounted_price=F('price') * (1 - F('discount_percentage') / 100.0)
+                    ).order_by('-calc_discounted_price', 'name')
+                elif sort == 'discount_desc':
+                    queryset = queryset.order_by('-discount_percentage', 'name')
+                else:
+                    logger.warning(f"Invalid sort parameter: {sort}")
+            except Exception as e:
+                logger.error(f"Sort error: {str(e)}, sort={sort}")
 
+        logger.info(f"StoreListView: search={search_query}, sort={sort}, results={queryset.count()}")
         return queryset
-
-
-class StoreDetailView(DetailView):
-    model = Store
-    template_name = 'store_detail.html'
-    context_object_name = 'store'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['store'].additional_images = self.object.additional_images or []
-        cart_quantity = 0
+        context['search_query'] = self.request.GET.get('search', '')
+        context['sort'] = self.request.GET.get('sort', '')
+        # Reset cart_store_id if cart is empty
+        cart_count = Cart.objects.filter(user=self.request.user).count() if self.request.user.is_authenticated else 0
+        if cart_count == 0:
+            self.request.session.pop('cart_store_id', None)
+            context['current_cart_store_id'] = ''
+        else:
+            context['current_cart_store_id'] = self.request.session.get('cart_store_id', '')
+        return context
+
+    def render_to_response(self, context):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                page_obj = context['page_obj']
+                html = render(self.request, 'store_grid_partial.html', {'page_obj': page_obj}).content.decode('utf-8')
+                return JsonResponse({'html': html})
+            except Exception as e:
+                logger.error(f"AJAX render error: {str(e)}")
+                return JsonResponse({'error': 'Render failed'}, status=500)
+        return super().render_to_response(context)
+
+class StoreDetailView(ListView):
+    model = Store
+    template_name = 'store_detail.html'
+    context_object_name = 'stores'
+
+    def get_queryset(self):
+        store_id = self.kwargs['pk']
+        current_time = timezone.localtime().time()
+        queryset = Store.objects.filter(
+            id=store_id,
+            is_active=True,
+            available_from__lte=current_time,
+            available_until__gte=current_time
+        ).prefetch_related(
+            Prefetch('reviews', queryset=Review.objects.select_related('user').order_by('-review_date')),
+            'tags'
+        )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        store = self.get_queryset().first()
+        if not store:
+            raise Http404("Store not found or not available")
+        
+        context['store'] = store
+        context['cart_quantity'] = 0
         if self.request.user.is_authenticated:
-            cart_item = Cart.objects.filter(user=self.request.user, store=self.object).first()
+            cart_item = Cart.objects.filter(user=self.request.user, store=store).first()
             if cart_item:
-                cart_quantity = cart_item.quantity
-        context['cart_quantity'] = cart_quantity
+                context['cart_quantity'] = cart_item.quantity
+        context['related_stores'] = Store.objects.filter(
+            tags__in=store.tags.all(),
+            is_active=True
+        ).exclude(id=store.id).distinct()[:3]
         context.update(base_context(self.request))
         return context
 
     def post(self, request, *args, **kwargs):
+        if 'rating' in request.POST:
+            return submit_review(request)
         return add_to_cart(request)
 
 @require_POST
 @login_required(login_url='login')
 def add_to_cart(request):
+    logger.debug(f"Add to cart request: method={request.method}, user={request.user}, POST={request.POST}")
+    if request.method != 'POST':
+        logger.error("Invalid request method")
+        return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
+
     store_id = request.POST.get('store_id')
-    note = request.POST.get('note', '')
+    quantity = request.POST.get('quantity', '')
+    logger.debug(f"Cart data: store_id={store_id}, quantity={quantity}")
+
+    # Validate inputs
+    if not store_id:
+        logger.error("Missing store_id")
+        return JsonResponse({'success': False, 'error': 'Missing store ID'}, status=400)
+
     try:
-        quantity = int(request.POST.get('quantity', 1))
+        quantity = int(quantity)
+        if quantity < 0:
+            logger.error(f"Negative quantity: {quantity}")
+            return JsonResponse({'success': False, 'error': 'Quantity cannot be negative'}, status=400)
     except ValueError:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'message': 'จำนวนไม่ถูกต้อง'})
-        messages.error(request, "จำนวนไม่ถูกต้อง")
-        return redirect('store_list')
+        logger.error(f"Invalid quantity format: {quantity}")
+        return JsonResponse({'success': False, 'error': 'Invalid quantity format'}, status=400)
 
+    # Get store
     try:
-        store = Store.objects.get(id=store_id)
+        store = Store.objects.get(id=store_id, is_active=True)
+        if store.quantity_available < quantity:
+            logger.error(f"Insufficient stock for store: {store_id}, requested={quantity}, available={store.quantity_available}")
+            return JsonResponse({'success': False, 'error': 'Insufficient stock'}, status=400)
     except Store.DoesNotExist:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'message': 'ร้านค้าไม่พบ'})
-        messages.error(request, "ร้านค้าไม่พบ")
-        return redirect('store_list')
+        logger.error(f"Store not found: {store_id}")
+        return JsonResponse({'success': False, 'error': 'Store not found'}, status=400)
 
-    if quantity < 0:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'message': 'จำนวนต้องไม่น้อยกว่า 0'})
-        messages.error(request, "จำนวนต้องไม่น้อยกว่า 0")
-        return redirect('store_list')
-    if store.quantity_available is not None and quantity > store.quantity_available:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'message': 'จำนวนที่เลือกเกินสต็อกที่มี'})
-        messages.error(request, "จำนวนที่เลือกเกินสต็อกที่มี")
-        return redirect('store_list')
-
-    cart_item = Cart.objects.filter(user=request.user).first()
-    if cart_item and str(cart_item.store.id) != store_id:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+    # Check cart store consistency
+    cart_count = Cart.objects.filter(user=request.user).count()
+    if cart_count == 0:
+        request.session.pop('cart_store_id', None)
+    else:
+        current_cart_store_id = request.session.get('cart_store_id')
+        if current_cart_store_id and current_cart_store_id != str(store.id):
+            logger.warning(f"Cart store mismatch: current={current_cart_store_id}, new={store.id}")
             return JsonResponse({
                 'success': False,
-                'message': 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่',
-            })
-        messages.error(request, "คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่")
-        return redirect('cart')
+                'error': 'You can only add items from one store at a time'
+            }, status=400)
 
-    if quantity > 0:
-        cart_item, created = Cart.objects.get_or_create(
+    try:
+        cart, created = Cart.objects.get_or_create(
             user=request.user,
             store=store,
-            defaults={'quantity': quantity, 'note': note}
+            defaults={'quantity': quantity}
         )
         if not created:
-            cart_item.quantity = quantity
-            cart_item.note = note
-            cart_item.save()
-        message = f"เพิ่ม {store.name} ลงตะกร้าเรียบร้อย!"
-    else:
-        Cart.objects.filter(user=request.user, store=store).delete()
-        message = f"ลบ {store.name} ออกจากตะกร้าเรียบร้อย!"
+            if quantity == 0:
+                cart.delete()
+                request.session.pop('cart_store_id', None)
+                message = 'Item removed from cart'
+                logger.info(f"Removed from cart: user={request.user}, store={store.name}")
+            else:
+                cart.quantity = quantity
+                cart.save()
+                message = f'Added {quantity} {store.name} to cart'
+                logger.info(f"Updated cart: user={request.user}, store={store.name}, quantity={quantity}")
+        else:
+            message = f'Added {quantity} {store.name} to cart'
+            logger.info(f"Created cart: user={request.user}, store={store.name}, quantity={quantity}")
 
-    cart_items = Cart.objects.filter(user=request.user)
-    cart_count = sum(item.quantity for item in cart_items)
-
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        request.session['cart_store_id'] = str(store.id) if quantity > 0 else None
+        cart_count = Cart.objects.filter(user=request.user).aggregate(total_quantity=Sum('quantity'))['total_quantity'] or 0
         return JsonResponse({
             'success': True,
             'message': message,
-            'cart_count': cart_count
+            'cartQuantity': cart_count,
+            'quantityAvailable': store.quantity_available
         })
-    messages.success(request, message)
-    return redirect('store_list')
+    except Exception as e:
+        logger.error(f"Add to cart error: {str(e)}, store_id={store_id}, user={request.user}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+@login_required
+def check_cart(request):
+    try:
+        cart_count = Cart.objects.filter(user=request.user).count()
+        logger.debug(f"Cart check for user={request.user}, count={cart_count}")
+        return JsonResponse({'cart_count': cart_count})
+    except Exception as e:
+        logger.error(f"Cart check error: {str(e)}, user={request.user}")
+        return JsonResponse({'error': 'Failed to check cart'}, status=500)
 
 @login_required(login_url='login')
 def cart(request):
@@ -181,7 +271,7 @@ def cart(request):
     cart_items = Cart.objects.filter(user=request.user).select_related('store')
     user_allergies = Allergy.objects.filter(user=request.user).values_list('name', flat=True)
     total_price = sum(item.total_discounted_price for item in cart_items)
-    shipping_fee = 9.0
+    shipping_fee = 5.0
     total_with_shipping = total_price + shipping_fee
     addresses = Address.objects.filter(user=request.user)
     cart_count = sum(item.quantity for item in cart_items)
@@ -196,9 +286,9 @@ def cart(request):
     if request.method == 'POST':
         if request.POST.get('clear_cart'):
             cart_items.delete()
-            messages.success(request, "ตะกร้าถูกล้างเรียบร้อยแล้ว")
+            messages.success(request, "ตะกร้าถูกล้างเรียบร้อย")
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True, 'message': 'ตะกร้าถูกล้างเรียบร้อยแล้ว'})
+                return JsonResponse({'success': True, 'message': 'ตะกร้าถูกล้างเรียบร้อย'})
             return redirect('cart')
 
         store_id = request.POST.get('store_id')
@@ -208,8 +298,8 @@ def cart(request):
             store = get_object_or_404(Store, id=store_id)
             if store.quantity_available is not None and quantity > store.quantity_available:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'message': 'จำนวนที่เลือกเกินสต็อกที่มี'})
-                messages.error(request, "จำนวนที่เลือกเกินสต็อกที่มี")
+                    return JsonResponse({'success': False, 'message': 'จำนวนที่เลือกเกินสต๊อก'})
+                messages.error(request, "จำนวนที่เลือกเกินสต๊อก")
                 return redirect('cart')
             cart_item = Cart.objects.filter(user=request.user).first()
             if cart_item and str(cart_item.store.id) != store_id:
@@ -265,7 +355,7 @@ def checkout(request):
 
     cart_items = Cart.objects.filter(user=request.user)
     total_price = sum(item.total_discounted_price or 0 for item in cart_items)
-    shipping_fee = 9.0
+    shipping_fee = 5.0
     total_with_shipping = total_price + shipping_fee
     cart_count = sum(item.quantity for item in cart_items)
 
@@ -286,7 +376,7 @@ def checkout(request):
         if not address_id or not payment_method:
             if is_ajax:
                 return JsonResponse({'success': False, 'message': 'กรุณาเลือกที่อยู่จัดส่งและช่องทางชำระเงิน'}, status=400)
-            messages.error(request, "กรุณาเลือกที่อยู่จัดส่งและช่องทางชำระเงิน")
+            messages.error(request, "กรุณาเลือกที่อยู่จัดส่งและช่องทางการชำระเงิน")
             return render(request, 'cart.html', {
                 'cart_items': cart_items,
                 'total_price': total_price,
@@ -328,7 +418,8 @@ def checkout(request):
                 shipping_fee=shipping_fee,
                 total_with_shipping=total_with_shipping,
                 payment_method=payment_method,
-                status='confirmed'
+                status='confirmed',
+                estimated_time=timezone.now() + timedelta(minutes=25)
             )
 
             for item in cart_items:
@@ -336,7 +427,7 @@ def checkout(request):
                     order=order,
                     store=item.store,
                     quantity=item.quantity,
-                    price=item.store.discounted_price,
+                    price=item.store.price,
                     note=item.note,
                 )
 
@@ -356,7 +447,8 @@ def checkout(request):
                 shipping_fee=shipping_fee,
                 total_with_shipping=total_with_shipping,
                 payment_method=payment_method,
-                status='confirmed' if payment_method == 'cash' else 'pending'
+                status='confirmed' if payment_method == 'cash_on_delivery' else 'pending',
+                estimated_time=timezone.now() + timedelta(minutes=25)
             )
 
             for item in cart_items:
@@ -364,7 +456,7 @@ def checkout(request):
                     order=order,
                     store=item.store,
                     quantity=item.quantity,
-                    price=item.store.discounted_price,
+                    price=item.store.price,
                     note=item.note,
                 )
 
@@ -373,8 +465,7 @@ def checkout(request):
             context = {'order': order, 'cart_count': 0}
             return render(request, 'checkout_success.html', context)
 
-        messages.error(request, "กรุณาใช้ช่องทางชำระเงินที่ถูกต้อง")
-        return redirect('cart')
+        return redirect('checkout_success', order_id=order.id)
 
     context = {
         'cart_items': cart_items,
@@ -401,16 +492,13 @@ def profile_settings(request):
 
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
-
         if form_type == 'profile':
-            form = ProfileForm(request.POST, instance=profile, user=request.user)
+            form = ProfileForm(request.POST, instance=profile)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว')
-                return redirect('profile_settings')
             else:
-                messages.error(request, 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลส่วนตัว กรุณาตรวจสอบข้อมูล')
-
+                messages.error(request, 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลส่วนตัว')
         elif form_type == 'address':
             form = AddressForm(request.POST)
             if form.is_valid():
@@ -418,45 +506,38 @@ def profile_settings(request):
                 address.user = request.user
                 address.save()
                 messages.success(request, 'เพิ่มที่อยู่เรียบร้อยแล้ว')
-                return redirect('profile_settings')
             else:
-                messages.error(request, 'เกิดข้อผิดพลาดในการเพิ่มที่อยู่ กรุณาตรวจสอบข้อมูล')
-
+                messages.error(request, 'เกิดข้อผิดพลาดในการเพิ่มที่อยู่')
         elif form_type == 'allergy':
             form = AllergyForm(request.POST)
             if form.is_valid():
                 allergy = form.save(commit=False)
                 allergy.user = request.user
                 allergy.save()
-                messages.success(request, 'เพิ่มสารก่อภูมิแพ้เรียบร้อยแล้ว')
-                return redirect('profile_settings')
+                messages.success(request, 'เพิ่มสารก่อภูมิแพ้เรียบร้อย')
             else:
-                messages.error(request, 'เกิดข้อผิดพลาดในการเพิ่มสารก่อภูมิแพ้ กรุณาตรวจสอบข้อมูล')
-
+                messages.error(request, 'เกิดข้อผิดพลาดในการเพิ่มสารก่อภูมิแพ้')
         elif form_type == 'delete_address':
             address_id = request.POST.get('address_id')
             try:
                 address = Address.objects.get(id=address_id, user=request.user)
                 address.delete()
-                messages.success(request, 'ลบที่อยู่เรียบร้อยแล้ว')
+                messages.success(request, 'ลบที่อยู่เรียบร้อย')
             except Address.DoesNotExist:
                 messages.error(request, 'ไม่พบที่อยู่ที่ต้องการลบ')
-            return redirect('profile_settings')
-
         elif form_type == 'delete_allergy':
             allergy_id = request.POST.get('allergy_id')
             try:
                 allergy = Allergy.objects.get(id=allergy_id, user=request.user)
                 allergy.delete()
-                messages.success(request, 'ลบสารก่อภูมิแพ้เรียบร้อยแล้ว')
+                messages.success(request, 'ลบสารก่อภูมิแพ้เรียบร้อย')
             except Allergy.DoesNotExist:
                 messages.error(request, 'ไม่พบสารก่อภูมิแพ้ที่ต้องการลบ')
-            return redirect('profile_settings')
+        return redirect('profile_settings')
 
     address_form = AddressForm()
     allergy_form = AllergyForm()
-    profile_form = ProfileForm(instance=profile, user=request.user)
-
+    profile_form = ProfileForm(instance=profile)
     context = {
         'profile': profile,
         'addresses': addresses,
@@ -476,12 +557,11 @@ def order_history(request):
     ).order_by('-order_time')
 
     for order in orders:
-        # คำนวณ estimated_time โดยบวก 25 นาที
-        order.estimated_time = order.order_time + timedelta(minutes=25)
         for item in order.items.all():
             review = item.store.reviews.filter(user=request.user).first()
             item.has_reviewed = bool(review)
             item.review_rating = review.rating if review else None
+            item.store_detail_url = reverse('store_detail', kwargs={'pk': item.store.id})
 
     context = {
         'orders': orders,
@@ -489,15 +569,14 @@ def order_history(request):
     context.update(base_context(request))
     return render(request, 'order_history.html', context)
 
-
 @login_required(login_url='login')
 def delete_order(request, order_id):
     try:
         order = Order.objects.get(id=order_id, buyer=request.user)
         order.delete()
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'message': 'ลบคำสั่งซื้อเรียบร้อยแล้ว'})
-        messages.success(request, 'ลบคำสั่งซื้อเรียบร้อยแล้ว')
+            return JsonResponse({'success': True, 'message': 'ลบคำสั่งซื้อเรียบร้อย'})
+        messages.success(request, 'ลบคำสั่งซื้อเรียบร้อย')
     except Order.DoesNotExist:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'})
@@ -519,22 +598,88 @@ def update_order_status(request, order_id):
 def submit_review(request):
     store_id = request.POST.get('store_id')
     rating = request.POST.get('rating')
-    
+    comment = request.POST.get('comment', '')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     try:
         rating = int(rating)
         if not 1 <= rating <= 5:
-            return JsonResponse({'success': False, 'message': 'คะแนนต้องอยู่ระหว่าง 1-5'})
+            message = 'กรุณาให้คะแนนระหว่าง 1-5'
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': message})
+            messages.error(request, message)
+            return redirect('store_detail', pk=store_id)
         
         store = get_object_or_404(Store, id=store_id)
         
+        # ตรวจสอบว่า user เคยซื้อจากร้านนี้
+        has_purchased = Order.objects.filter(
+            buyer=request.user,
+            items__store=store
+        ).exists()
+        if not has_purchased:
+            message = 'คุณต้องซื้อจากร้านนี้ก่อนจึงจะรีวิวได้'
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': message})
+            messages.error(request, message)
+            return redirect('store_detail', pk=store_id)
+        
+        # ตรวจสอบรีวิวซ้ำ
         if Review.objects.filter(user=request.user, store=store).exists():
-            return JsonResponse({'success': False, 'message': 'คุณรีวิวร้านนี้แล้ว'})
+            message = 'คุณรีวิวร้านนี้แล้ว'
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': message})
+            messages.error(request, message)
+            return redirect('store_detail', pk=store_id)
         
         Review.objects.create(
             user=request.user,
             store=store,
-            rating=rating
+            rating=rating,
+            comment=comment
         )
-        return JsonResponse({'success': True, 'message': 'รีวิวสำเร็จ'})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': f'เกิดข้อผิดพลาด: {str(e)}'})
+        message = 'รีวิวสำเร็จ'
+        if is_ajax:
+            return JsonResponse({'success': True, 'message': message})
+        messages.success(request, message)
+        return redirect('store_detail', pk=store_id)
+    
+    except (ValueError, Store.DoesNotExist) as e:
+        message = f'เกิดข้อผิดพลาด: {str(e)}'
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': message})
+        messages.error(request, message)
+        return redirect('store_detail', pk=store_id)
+
+def search_suggestions(request):
+    query = request.GET.get('search', '').strip()
+    suggestions = []
+    if query:
+        try:
+            stores = Store.objects.filter(
+                Q(name__icontains=query) |
+                Q(description__icontains=query) |
+                Q(additional_details__icontains=query),
+                is_active=True,
+                quantity_available__gt=0
+            ).values('name').distinct()[:10]
+            suggestions = [{'id': i, 'name': s['name']} for i, s in enumerate(stores)]
+        except Exception as e:
+            logger.error(f"Suggestions error: {str(e)}, query: {query}")
+            suggestions = []
+    logger.info(f"Search suggestions: query={query}, results={len(suggestions)}")
+    return JsonResponse({'suggestions': suggestions})
+
+@login_required
+def get_address(request, address_id):
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    return JsonResponse({
+        'label': address.label,
+        'address_line': address.address_line,
+        'subdistrict': address.subdistrict,
+        'district': address.district,
+        'province': address.province,
+        'postal_code': address.postal_code,
+        'phone_number': str(address.phone_number),
+        'is_default': address.is_default,
+    })

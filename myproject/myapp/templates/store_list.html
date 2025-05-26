@@ -1,7 +1,191 @@
 {% extends 'base.html' %}
 {% load static store_tags %}
 
-{% block title %}<strong class="imsuk-bold">IMSUK</strong> - รายการร้านค้า{% endblock %}
+{% block extra_head %}
+<meta name="description" content="ค้นหาร้านค้าอาหารคุณภาพจาก IMSUK ช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น">
+<meta name="keywords" content="IMSUK, ร้านค้าอาหาร, ลดขยะอาหาร, สั่งอาหาร">
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/fontawesome.min.css' %}" rel="stylesheet">
+<style>
+.search-form { 
+    background: #f8f9fa; 
+    padding: 1rem; 
+    border-radius: 10px; 
+    margin-bottom: 1.5rem; 
+}
+.search-container { 
+    display: flex; 
+    align-items: center; 
+    position: relative; 
+    gap: 0.5rem; 
+}
+.search-input { 
+    border-radius: 20px; 
+    border: 2px solid #4CAF50; 
+    padding: 0.5rem 2rem 0.5rem 2.5rem; 
+    flex: 1; 
+    font-size: 1rem; 
+}
+.search-icon { 
+    position: absolute; 
+    left: 0.75rem; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #4CAF50; 
+}
+.clear-search { 
+    position: absolute; 
+    right: 0.75rem; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    cursor: pointer; 
+    color: #6c757d; 
+    display: none; 
+}
+.clear-search.show { 
+    display: block; 
+}
+.btn-search { 
+    background: #4CAF50; 
+    color: white; 
+    border-radius: 20px; 
+    padding: 0.5rem 1.5rem; 
+    font-size: 1rem; 
+}
+.suggestions { 
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    right: 0; 
+    background: white; 
+    border: 1px solid #ddd; 
+    border-radius: 5px; 
+    max-height: 200px; 
+    overflow-y: auto; 
+    z-index: 1000; 
+    display: none; 
+}
+.suggestions.show { 
+    display: block; 
+}
+.suggestion-item { 
+    padding: 0.5rem 1rem; 
+    cursor: pointer; 
+}
+.suggestion-item:hover { 
+    background: #f1f1f1; 
+}
+.sidebar { 
+    background: #f8f9fa; 
+    padding: 1.5rem; 
+    border-radius: 10px; 
+}
+.btn-apply { 
+    background: #4CAF50; 
+    color: white; 
+}
+.store-card { 
+    border: 2px solid #A9D18E; 
+    border-radius: 10px; 
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.card-img-top { 
+    width: 100%; 
+    height: 200px;
+    object-fit: cover;
+}
+.card-body { 
+    padding: 1rem; 
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.card-title { 
+    font-size: 1.25rem; 
+    margin-bottom: 0.5rem; 
+    min-height: 2.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.additional-details { 
+    font-size: 0.9rem; 
+    margin-bottom: 0.5rem; 
+    min-height: 2.8rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.price-section { 
+    font-size: 1rem; 
+    margin-bottom: 0.5rem; 
+    min-height: 2rem;
+}
+.opening-hours { 
+    font-size: 0.9rem; 
+    margin-bottom: 0.5rem; 
+    min-height: 1.5rem;
+}
+.opening-hours i { 
+    margin-right: 5px;
+}
+.cart-controls { 
+    margin-top: auto;
+    display: flex; 
+    justify-content: flex-end; 
+}
+.quantity-controls { 
+    display: flex; 
+    gap: 0.5rem; 
+}
+.quantity-input { 
+    width: 60px; 
+    text-align: center; 
+}
+.add-to-cart-btn, .confirm-btn { 
+    border-radius: 20px; 
+}
+.increase-quantity { 
+    border-color: #A9D18E; 
+    color: #A9D18E; 
+}
+.increase-quantity:hover { 
+    background: #A9D18E; 
+    color: white; 
+}
+.decrease-quantity {
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+.decrease-quantity:hover {
+    background: #4CAF50;
+    color: white;
+}
+.stock-low { 
+    color: #dc3545; 
+}
+.badge-discount {
+    background-color: #FF69B4 !important;
+}
+@media (max-width: 992px) { 
+    .sidebar { margin-bottom: 1.5rem; } 
+}
+@media (max-width: 576px) { 
+    .cart-controls { justify-content: center; } 
+    .store-card { height: 450px; }
+    .card-img-top { height: 150px; }
+    .search-container { flex-direction: column; align-items: stretch; }
+    .btn-search { width: 100%; margin-top: 0.5rem; }
+}
+</style>
+{% endblock %}
+
+{% block title %}<span class="imsuk-bold">IMSUK</span> - รายการร้านค้า{% endblock %}
 
 {% block content %}
 <div class="container my-5">
@@ -18,410 +202,528 @@
     <!-- Mission Statement -->
     <div class="mission-statement mb-4 text-center">
         <h2 class="text-success">ร้านค้า</h2>
-        <p class="text-muted">เลือกซื้ออาหารจากร้านค้าที่ช่วยลดขยะอาหารและดูแลโลกกับ <strong>IMSUK</strong></p>
+        <p class="text-muted">เลือกซื้ออาหารจากร้านค้าที่ช่วยลดขยะอาหารและดูแลโลกกับ <span class="imsuk-bold">IMSUK</span></p>
     </div>
 
     <!-- Search Form -->
-    <form method="get" class="search-form mb-4">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-8">
-                <label for="search" class="form-label">ค้นหาร้านค้าหรือเมนู</label>
-                <div class="search-input-group position-relative">
-                    <span class="search-icon position-absolute top-50 translate-middle-y ms-3">🔍</span>
-                    <input type="text" class="form-control ps-5" name="search" id="search" value="{{ search_query }}" placeholder="เช่น พิซซ่า, ซูชิ, หรือชื่อร้าน" aria-label="ค้นหาร้านค้าหรือเมนู">
+    <div class="search-form">
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="search" class="form-control search-input" value="{{ search_query|default:'' }}" placeholder="ค้นหา เช่น พิซซ่า, ซูชิ" aria-label="ค้นหาร้านค้าหรือเมนู">
+            <i class="fas fa-times clear-search" aria-hidden="true"></i>
+            <button id="search-btn" class="btn btn-search" type="button">ค้นหา</button>
+            <div class="suggestions"></div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3 col-md-4">
+            <div class="sidebar">
+                <h4>ตัวกรอง</h4>
+                <div class="filter-group mb-3">
+                    <label for="sort" class="form-label">เรียงตาม</label>
+                    <select id="sort" class="form-select" aria-label="เลือกการเรียงลำดับ">
+                        <option value="" {% if not sort %}selected{% endif %}>ค่าเริ่มต้น</option>
+                        <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>ราคา: ถูกไปแพง</option>
+                        <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>ราคา: แพงไปถูก</option>
+                        <option value="discount_desc" {% if sort == "discount_desc" %}selected{% endif %}>ส่วนลด: สูงไปต่ำ</option>
+                    </select>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-imsuk w-100" aria-label="ค้นหา">ค้นหา</button>
+                <button id="apply-filters" class="btn btn-apply w-100">ใช้ตัวกรอง</button>
             </div>
         </div>
-    </form>
 
-    <!-- Store List -->
-    <div class="row g-4">
-        {% for store in stores %}
-        <div class="col-6 col-md-3 mb-4">
-            <div class="store-card card h-100 shadow-sm" role="region" aria-labelledby="store-name-{{ store.id }}">
-                <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
-                    {% if store.store_image %}
-                    <img src="{{ store.store_image.url }}" class="card-img-top store-image" alt="{{ store.name }}" loading="lazy" aria-describedby="store-name-{{ store.id }}">
-                    {% else %}
-                    <img src="{% static 'images/default_store.jpg' %}" class="card-img-top store-image" alt="ไม่มีรูปภาพร้านค้า" loading="lazy">
-                    {% endif %}
-                </a>
-                <div class="card-body">
-                    <a href="{% url 'store_detail' store.id %}" style="text-decoration: none; color: inherit;">
-                        <h5 class="card-title" id="store-name-{{ store.id }}">{{ store.name }}</h5>
-                        {% if store.additional_details %}
-                        <p class="additional-details">{{ store.additional_details|truncatechars:50 }}</p>
-                        {% endif %}
-                    </a>
-                    <div class="price-section mb-2">
-                        {% if store.discount_percentage and store.discount_percentage > 0 %}
-                        <span class="badge badge-discount me-2">-{{ store.discount_percentage|floatformat:0 }}%</span>
-                        <span class="discounted-price">{{ store.discounted_price|floatformat:0 }} บาท</span>
-                        <span class="original-price ms-2">{{ store.price|floatformat:0 }} บาท</span>
-                        {% else %}
-                        <span class="discounted-price">{{ store.price|floatformat:0 }} บาท</span>
-                        {% endif %}
-                    </div>
-                    <p class="opening-hours">
-                        <i class="fas fa-clock clock-icon"></i>
-                        {{ store.available_from|time:"H:i" }} - {{ store.available_until|time:"H:i" }}
-                    </p>
-                    <!-- Add to Cart Form -->
-                    <form method="post" class="d-flex align-items-center add-to-cart-form" data-store-id="{{ store.id }}" data-store-name="{{ store.name }}">
-                        {% csrf_token %}
-                        <input type="hidden" name="store_id" value="{{ store.id }}">
-                        <input type="hidden" name="quantity" value="1" class="quantity-hidden" max="{{ store.quantity_available|default:9999 }}">
-                        <div class="cart-controls" data-added="false">
-                            <button type="button" class="btn btn-imsuk add-to-cart-btn" aria-label="เพิ่มลงตะกร้า">
-                                <i class="fas fa-cart-plus me-2"></i>เพิ่ม
-                            </button>
+        <!-- Store List -->
+        <div class="col-lg-9 col-md-8">
+            <div class="row g-4" id="store-grid">
+                {% for store in page_obj %}
+                <div class="col-6 col-md-4">
+                    <div class="store-card card shadow-sm">
+                        <a href="{% url 'store_detail' store.id %}">
+                            <img src="{{ store.store_image.url|default:'https://via.placeholder.com/300' }}" class="card-img-top" alt="{{ store.name }}">
+                        </a>
+                        <div class="card-body">
+                            <a href="{% url 'store_detail' store.id %}" class="text-decoration-none">
+                                <h5 class="card-title">{{ store.name }}</h5>
+                            </a>
+                            <p class="additional-details">{{ store.additional_details|truncatechars:50|default:"อาหารคุณภาพ ลดขยะอาหาร" }}</p>
+                            <div class="price-section">
+                                {% if store.discount_percentage > 0 %}
+                                <span class="badge badge-discount me-2">-{{ store.discount_percentage|floatformat:0 }}%</span>
+                                <span class="discounted-price text-success">{{ store.discounted_price|floatformat:0 }} บาท</span>
+                                <span class="original-price ms-2 text-muted text-decoration-line-through">{{ store.price|floatformat:0 }} บาท</span>
+                                {% else %}
+                                <span class="discounted-price text-success">{{ store.price|floatformat:0 }} บาท</span>
+                                {% endif %}
+                            </div>
+                            <p class="opening-hours">
+                                <i class="fas fa-clock"></i>
+                                {{ store.available_from|time:"H:i" }} - {{ store.available_until|time:"H:i" }}
+                            </p>
+                            <form method="post" id="add-to-cart-form-{{ store.id }}" class="add-to-cart-form" data-store-id="{{ store.id }}" data-store-name="{{ store.name }}">
+                                {% csrf_token %}
+                                <input type="hidden" name="store_id" value="{{ store.id }}">
+                                <input type="hidden" name="quantity" value="1" class="quantity-hidden" data-max="{{ store.quantity_available|default:0 }}">
+                                <div class="cart-controls">
+                                    {% if store.quantity_available > 0 %}
+                                    <button type="button" class="btn btn-success add-to-cart-btn" aria-label="เพิ่ม {{ store.name }} ลงตะกร้า" {% if not user.is_authenticated %}disabled title="กรุณาเข้าสู่ระบบ"{% endif %}>
+                                        <i class="fas fa-cart-plus me-2"></i>เพิ่ม
+                                    </button>
+                                    {% else %}
+                                    <p class="text-danger stock-low">สินค้าหมด</p>
+                                    {% endif %}
+                                </div>
+                            </form>
+                            {% if store.quantity_available <= 5 and store.quantity_available > 0 %}
+                            <p class="stock-low">สต็อกเหลือน้อย ({{ store.quantity_available }})</p>
+                            {% endif %}
                         </div>
-                    </form>
+                    </div>
                 </div>
+                {% empty %}
+                <div class="col-12 text-center">
+                    <p class="text-muted">ไม่มีร้านค้าที่ตรงกับการค้นหา</p>
+                </div>
+                {% endfor %}
             </div>
-        </div>
-        {% empty %}
-        <div class="col-12 text-center">
-            <p class="text-muted">ไม่มีร้านค้าที่ตรงกับการค้นหา กรุณาลองใหม่!</p>
-        </div>
-        {% endfor %}
-    </div>
 
-    <!-- Messages -->
-    {% if messages %}
-    <div class="mt-3">
-        {% for message in messages %}
-        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
-            {{ message }}
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Pagination">
+                <ul class="pagination justify-content-center mt-4">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">ก่อนหน้า</a>
+                    </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">ถัดไป</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
         </div>
-        {% endfor %}
     </div>
-    {% endif %}
 </div>
 
-<style>
-/* Custom styles for store list */
-body {
-    font-family: 'Prompt', Arial, sans-serif !important;
-    background-color: var(--imsuk-bg) !important;
-}
-
-.store-card {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border-radius: 10px !important;
-}
-
-.store-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
-}
-
-.store-image {
-    height: 150px;
-    object-fit: cover;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-}
-
-.card-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--imsuk-primary);
-}
-
-.additional-details {
-    font-size: 0.85rem;
-    color: var(--imsuk-text);
-    margin-bottom: 0.5rem;
-}
-
-.price-section {
-    font-size: 0.9rem;
-}
-
-.badge-discount {
-    background-color: var(--imsuk-accent);
-    font-size: 0.75rem;
-}
-
-.discounted-price {
-    font-weight: 600;
-    color: var(--imsuk-primary);
-}
-
-.original-price {
-    text-decoration: line-through;
-    color: var(--imsuk-text);
-    font-size: 0.8rem;
-}
-
-.opening-hours {
-    font-size: 0.8rem;
-    color: var(--imsuk-text);
-}
-
-.clock-icon {
-    color: var(--imsuk-secondary);
-    margin-right: 0.3rem;
-}
-
-.btn-imsuk {
-    background-color: var(--imsuk-secondary) !important;
-    color: var(--imsuk-primary) !important;
-    font-size: 0.85rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 5px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.btn-imsuk:hover {
-    background-color: #A8C66B !important;
-    transform: scale(1.05);
-}
-
-.btn-outline-imsuk {
-    border: 1px solid var(--imsuk-secondary) !important;
-    color: var(--imsuk-primary) !important;
-    font-size: 0.8rem;
-    padding: 0.3rem 0.5rem;
-}
-
-.btn-outline-imsuk:hover {
-    background-color: var(--imsuk-secondary) !important;
-    color: var(--imsuk-primary) !important;
-}
-
-.quantity-input {
-    width: 50px;
-    text-align: center;
-    font-size: 0.8rem;
-    border: 1px solid var(--imsuk-secondary);
-    border-radius: 5px;
-}
-
-.search-form .form-control {
-    border-radius: 5px;
-    border: 1px solid var(--imsuk-secondary);
-    font-size: 0.9rem;
-}
-
-.search-icon {
-    color: var(--imsuk-text);
-}
-
-.alert {
-    border-radius: 5px;
-}
-
-@media (max-width: 768px) {
-    .store-card {
-        margin-bottom: 1.5rem;
-    }
-
-    .card-title {
-        font-size: 1rem;
-    }
-
-    .store-image {
-        height: 120px;
-    }
-
-    .additional-details {
-        font-size: 0.8rem;
-    }
-
-    .price-section {
-        font-size: 0.85rem;
-    }
-
-    .opening-hours {
-        font-size: 0.75rem;
-    }
-
-    .btn-imsuk {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.6rem;
-    }
-}
-</style>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('store_list.js loaded');
-    const forms = document.querySelectorAll('.add-to-cart-form');
+function getCsrfToken() {
+    const token = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (!token) {
+        console.error('CSRF token not found');
+        return '';
+    }
+    return token.value;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const searchBtn = document.getElementById('search-btn');
+    const searchInput = document.getElementById('search');
+    const sortSelect = document.getElementById('sort');
+    const applyBtn = document.getElementById('apply-filters');
+    const suggestions = document.querySelector('.suggestions');
+    const clearSearch = document.querySelector('.clear-search');
     const toastEl = document.getElementById('cartToast');
-    const toast = new bootstrap.Toast(toastEl, { delay: 2000 });
+    const storeGrid = document.getElementById('store-grid');
+    const toast = toastEl ? new bootstrap.Toast(toastEl, { delay: 3000 }) : null;
     const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
-    const currentCartStoreId = '{{ current_cart_store_id|default:"" }}';
+    let currentCartStoreId = '{{ current_cart_store_id|default:"" }}';
 
-    forms.forEach(form => {
-        const cartControls = form.querySelector('.cart-controls');
-        const quantityHidden = form.querySelector('.quantity-hidden');
-        const storeId = form.getAttribute('data-store-id');
-        const storeName = form.getAttribute('data-store-name');
+    // Debug: Check elements
+    console.log('Elements initialized:', {
+        searchBtn: !!searchBtn,
+        searchInput: !!searchInput,
+        sortSelect: !!sortSelect,
+        applyBtn: !!applyBtn,
+        suggestions: !!suggestions,
+        clearSearch: !!clearSearch,
+        toastEl: !!toastEl,
+        storeGrid: !!storeGrid,
+        csrfToken: getCsrfToken(),
+        addToCartUrl: "{% url 'add_to_cart' %}",
+        checkCartUrl: "{% url 'cart_check' %}",
+        currentCartStoreId: currentCartStoreId
+    });
 
-        console.log('Form initialized for store:', storeName, storeId);
+    if (!toast) console.error('Toast element not found or Bootstrap not loaded');
+    if (!sortSelect) console.error('Sort select not found');
+    if (!applyBtn) console.error('Apply filters button not found');
 
-        cartControls.addEventListener('click', function(e) {
-            const addButton = e.target.closest('.add-to-cart-btn');
-            if (!addButton) return;
-
-            e.preventDefault();
-            console.log('Add to cart button clicked for store:', storeName);
-
-            if (!isAuthenticated) {
-                console.log('User not authenticated, redirecting to login');
-                toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบเพื่อเพิ่มสินค้าลงตะกร้า';
-                toastEl.classList.remove('bg-success', 'bg-danger');
-                toastEl.classList.add('bg-warning');
-                toast.show();
-                setTimeout(() => { window.location.href = "{% url 'login' %}"; }, 1500);
-                return;
-            }
-
-            if (currentCartStoreId && currentCartStoreId !== storeId) {
-                console.log('Cart contains items from another store:', currentCartStoreId);
-                toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
-                toastEl.classList.remove('bg-success', 'bg-danger');
-                toastEl.classList.add('bg-warning');
-                toast.show();
-                return;
-            }
-
-            quantityHidden.value = 1;
-            cartControls.setAttribute('data-added', 'true');
-            const maxQuantity = parseInt(quantityHidden.getAttribute('max')) || 9999;
-            console.log('Switching to quantity controls, max:', maxQuantity);
-
-            cartControls.innerHTML = `
-                <button type="button" class="btn btn-outline-imsuk decrease-quantity" aria-label="ลดจำนวน">-</button>
-                <input type="number" name="quantity" value="${quantityHidden.value}" min="0" max="${maxQuantity}" class="quantity-input mx-2" aria-label="จำนวน" readonly>
-                <button type="button" class="btn btn-outline-imsuk increase-quantity" aria-label="เพิ่มจำนวน">+</button>
-                <button type="submit" class="btn btn-imsuk ms-2 confirm-btn" aria-label="ยืนยันตะกร้า">ยืนยัน</button>
-            `;
-
-            bindQuantityControls(form, cartControls);
+    // Clear search
+    if (searchInput && clearSearch) {
+        searchInput.addEventListener('input', () => {
+            console.log('Search input changed:', searchInput.value);
+            clearSearch.classList.toggle('show', searchInput.value.trim() !== '');
+            applyFilters();
         });
+        clearSearch.addEventListener('click', () => {
+            console.log('Clear search clicked');
+            searchInput.value = '';
+            clearSearch.classList.remove('show');
+            suggestions.classList.remove('show');
+            suggestions.innerHTML = '';
+            applyFilters();
+        });
+    }
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('Form submitted for store:', storeName, 'Quantity:', quantityHidden.value);
-
-            if (!isAuthenticated) {
-                console.log('User not authenticated on submit');
-                toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบเพื่อเพิ่มสินค้าลงตะกร้า';
-                toastEl.classList.remove('bg-success', 'bg-danger');
-                toastEl.classList.add('bg-warning');
-                toast.show();
-                setTimeout(() => { window.location.href = "{% url 'login' %}"; }, 1500);
-                return;
+    // Apply Filters
+    function applyFilters() {
+        if (!storeGrid) {
+            console.error('Store grid not found');
+            return;
+        }
+        const searchValue = searchInput ? searchInput.value.trim() : '';
+        const sortValue = sortSelect ? sortSelect.value : '';
+        const params = new URLSearchParams();
+        if (searchValue) params.append('search', searchValue);
+        if (sortValue) params.append('sort', sortValue);
+        const url = `/stores/?${params.toString()}`;
+        console.log('Applying filters:', { search: searchValue, sort: sortValue, url });
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
             }
-
-            if (currentCartStoreId && currentCartStoreId !== storeId) {
-                console.log('Cart contains items from another store on submit:', currentCartStoreId);
-                toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่ ไปที่ตะกร้าเพื่อล้าง';
-                toastEl.classList.remove('bg-success', 'bg-danger');
-                toastEl.classList.add('bg-warning');
-                toast.show();
-                return;
+        })
+        .then(response => {
+            console.log('Fetch /stores/ status:', response.status, 'URL:', url);
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+                });
             }
-
-            const confirmBtn = cartControls.querySelector('.confirm-btn');
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = 'กำลังยืนยัน...';
-            console.log('Sending AJAX request to add_to_cart');
-
-            const formData = new FormData(this);
-            fetch("{% url 'add_to_cart' %}", {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                console.log('AJAX response status:', response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('AJAX response data:', data);
-                toastEl.querySelector('.toast-body').textContent = data.message;
-                toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
-                toastEl.classList.add(data.success ? (parseInt(quantityHidden.value) === 0 ? 'bg-danger' : 'bg-success') : 'bg-danger');
-                toast.show();
-
-                if (data.success) {
-                    const badge = document.querySelector('.cart-badge');
-                    if (badge && data.cart_count !== undefined) {
-                        badge.textContent = data.cart_count;
-                        badge.style.display = data.cart_count > 0 ? 'inline-block' : 'none';
-                    }
-
-                    cartControls.setAttribute('data-added', 'false');
-                    quantityHidden.value = 1;
-                    cartControls.innerHTML = `
-                        <button type="button" class="btn btn-imsuk add-to-cart-btn" aria-label="เพิ่มลงตะกร้า">
-                            <i class="fas fa-cart-plus me-2"></i>เพิ่ม
-                        </button>
-                    `;
-                }
-            })
-            .catch(error => {
-                console.error('Error adding to cart:', error);
-                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการอัปเดตตะกร้า กรุณาลองใหม่';
-                toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
+            return response.json();
+        })
+        .then(data => {
+            console.log('Fetch /stores/ data:', data);
+            if (data.html) {
+                storeGrid.innerHTML = data.html;
+                bindCartForms();
+                window.history.pushState({}, '', url);
+            } else {
+                throw new Error('No HTML content in response');
+            }
+        })
+        .catch(error => {
+            console.error('Filter error:', error.message);
+            if (toast) {
+                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการกรอง กรุณาลองใหม่';
+                toastEl.classList.remove('bg-success', 'bg-warning');
                 toastEl.classList.add('bg-danger');
                 toast.show();
-            })
-            .finally(() => {
-                if (confirmBtn) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'ยืนยัน';
-                }
-            });
+            }
         });
+    }
 
-        function bindQuantityControls(form, cartControls) {
-            const quantityInput = cartControls.querySelector('.quantity-input');
-            const confirmBtn = cartControls.querySelector('.confirm-btn');
+    // Event Listeners
+    if (searchBtn) {
+        searchBtn.addEventListener('click', () => {
+            console.log('Search button clicked');
+            applyFilters();
+        });
+    }
+    if (searchInput) {
+        searchInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                console.log('Enter key pressed on search input');
+                applyFilters();
+            }
+        });
+    }
+    if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+            console.log('Sort select changed:', sortSelect.value);
+            applyFilters();
+        });
+    }
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            console.log('Apply filters button clicked');
+            applyFilters();
+        });
+    }
 
-            function updateConfirmButton() {
-                const quantity = parseInt(quantityInput.value);
-                confirmBtn.classList.remove('btn-imsuk', 'btn-danger');
-                confirmBtn.classList.add(quantity === 0 ? 'btn-danger' : 'btn-imsuk');
+    // Check if cart is empty
+    function isCartEmpty() {
+        return fetch("{% url 'cart_check' %}", {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => {
+            console.log('Cart check status:', response.status);
+            if (!response.ok) {
+                throw new Error(`Cart check failed: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Cart check data:', data);
+            return data.cart_count === 0;
+        })
+        .catch(error => {
+            console.error('Cart check error:', error.message);
+            return true; // Assume empty if error
+        });
+    }
+
+    // Bind cart forms
+    function bindCartForms() {
+        const forms = document.querySelectorAll('.add-to-cart-form');
+        console.log('Binding cart forms, found:', forms.length);
+        forms.forEach(form => {
+            const cartControls = form.querySelector('.cart-controls');
+            const storeId = form.getAttribute('data-store-id');
+            const storeName = form.getAttribute('data-store-name');
+            const addBtn = cartControls.querySelector('.add-to-cart-btn');
+            if (!addBtn) {
+                console.warn('No add-to-cart-btn in store:', storeId);
+                return;
+            }
+            if (!storeId) {
+                console.error('Missing store ID in form:', form);
+                return;
             }
 
-            updateConfirmButton();
+            // Debug
+            console.log('Binding form for store:', storeId, 'name:', storeName);
 
-            cartControls.querySelector('.increase-quantity').addEventListener('click', () => {
-                let quantity = parseInt(quantityInput.value);
-                const max = parseInt(quantityInput.getAttribute('max'));
-                if (quantity < max) {
-                    quantityInput.value = quantity + 1;
-                    quantityHidden.value = quantityInput.value;
-                    updateConfirmButton();
-                    console.log('Increased quantity to:', quantityInput.value);
+            // Remove existing listeners
+            const newAddBtn = addBtn.cloneNode(true);
+            addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+
+            newAddBtn.addEventListener('click', async () => {
+                console.log('Add to cart for store:', storeId);
+                if (!isAuthenticated) {
+                    if (toast) {
+                        toastEl.querySelector('.toast-body').textContent = 'กรุณาเข้าสู่ระบบเพื่อเพิ่มสินค้าลงตะกร้า';
+                        toastEl.classList.remove('bg-danger', 'bg-success');
+                        toastEl.classList.add('bg-warning');
+                        toast.show();
+                    }
+                    setTimeout(() => window.location.href = "{% url 'login' %}", 1500);
+                    return;
                 }
+
+                // Check if cart is empty
+                const cartIsEmpty = await isCartEmpty();
+                console.log('Cart empty:', cartIsEmpty);
+                if (!cartIsEmpty && currentCartStoreId && currentCartStoreId !== storeId) {
+                    if (toast) {
+                        toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่';
+                        toastEl.classList.remove('bg-danger', 'bg-success');
+                        toastEl.classList.add('bg-warning');
+                        toast.show();
+                    }
+                    return;
+                }
+
+                cartControls.setAttribute('data-added', 'true');
+                const quantityHidden = form.querySelector('.quantity-hidden');
+                const maxQuantity = parseInt(quantityHidden.getAttribute('data-max')) || 9999;
+                console.log('Max quantity:', maxQuantity);
+                cartControls.innerHTML = `
+                    <div class="quantity-controls">
+                        <button type="button" class="btn btn-outline-secondary decrease-quantity" aria-label="ลดจำนวน">-</button>
+                        <input type="number" name="quantity" value="${quantityHidden.value}" min="0" max="${maxQuantity}" class="form-control quantity-input">
+                        <button type="button" class="btn btn-success increase-quantity" aria-label="เพิ่มจำนวน">+</button>
+                    </div>
+                    <button type="submit" class="btn btn-success confirm-btn">ยืนยัน</button>
+                `;
+                bindQuantityControls(form, cartControls);
             });
 
-            cartControls.querySelector('.decrease-quantity').addEventListener('click', () => {
-                let quantity = parseInt(quantityInput.value);
-                if (quantity > 0) {
-                    quantityInput.value = quantity - 1;
-                    quantityHidden.value = quantityInput.value;
-                    updateConfirmButton();
-                    console.log('Decreased quantity to:', quantityInput.value);
-                }
+            form.addEventListener('submit', e => {
+                e.preventDefault();
+                const confirmBtn = cartControls.querySelector('.confirm-btn');
+                console.log('Submitting cart for store:', storeId);
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'กำลังดำเนินการ...';
+                const formData = new FormData(form);
+                console.log('Cart form data:', Object.fromEntries(formData));
+                fetch("{% url 'add_to_cart' %}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    console.log('Cart response status:', response.status);
+                    if (response.status === 403) {
+                        window.location.href = "{% url 'login' %}";
+                        throw new Error('Unauthorized - redirecting to login');
+                    }
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Cart response:', data);
+                    if (toast) {
+                        toastEl.querySelector('.toast-body').textContent = data.message;
+                        toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
+                        toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
+                        toast.show();
+                    }
+                    if (data.success) {
+                        const badge = document.querySelector('.cart-badge');
+                        if (badge) {
+                            badge.textContent = data.cartQuantity;
+                            badge.style.display = data.cartQuantity > 0 ? 'inline-block' : 'none';
+                        }
+                        if (data.quantityAvailable === 0) {
+                            cartControls.innerHTML = '<p class="text-danger stock-low">สินค้าหมด</p>';
+                        } else {
+                            cartControls.setAttribute('data-added', 'false');
+                            quantityHidden.value = '1';
+                            cartControls.innerHTML = `
+                                <button type="button" class="btn btn-success add-to-cart-btn" aria-label="Add to cart for ${storeName}">
+                                    <i class="fas fa-cart-plus me-2"></i>เพิ่ม
+                                </button>
+                            `;
+                            bindCartForms();
+                        }
+                        // Update currentCartStoreId
+                        currentCartStoreId = data.cartQuantity > 0 ? storeId : '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Cart submission error:', error.message);
+                    if (toast) {
+                        toastEl.querySelector('.toast-body').textContent = error.message || 'เกิดข้อผิดพลาดในการเพิ่มลงตะกร้า';
+                        toastEl.classList.remove('bg-success', 'bg-warning');
+                        toastEl.classList.add('bg-danger');
+                        toast.show();
+                    }
+                })
+                .finally(() => {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'ยืนยัน';
+                });
             });
-        }
-    });
+
+            function bindQuantityControls(form, cartControls) {
+                const quantityInput = cartControls.querySelector('.quantity-input');
+                const quantityHidden = form.querySelector('.quantity-hidden');
+                const confirmBtn = cartControls.querySelector('.confirm-btn');
+
+                function updateConfirm() {
+                    const qty = parseInt(quantityInput.value) || 0;
+                    confirmBtn.classList.toggle('btn-danger', qty === 0);
+                    confirmBtn.classList.toggle('btn-success', qty > 0);
+                    confirmBtn.textContent = qty === 0 ? 'ลบจากตะกร้า' : 'ยืนยัน';
+                }
+
+                updateConfirm();
+
+                cartControls.querySelector('.increase-quantity').addEventListener('click', () => {
+                    const max = parseInt(quantityInput.getAttribute('max'));
+                    if (quantityInput.value < max) {
+                        quantityInput.value = parseInt(quantityInput.value) + 1;
+                        quantityHidden.value = quantityInput.value;
+                        updateConfirm();
+                    }
+                });
+
+                cartControls.querySelector('.decrease-quantity').addEventListener('click', () => {
+                    if (quantityInput.value > 0) {
+                        quantityInput.value = parseInt(quantityInput.value) - 1;
+                        quantityHidden.value = quantityInput.value;
+                        updateConfirm();
+                    }
+                });
+
+                quantityInput.addEventListener('input', () => {
+                    const value = parseInt(quantityInput.value) || 0;
+                    const max = parseInt(quantityInput.getAttribute('max'));
+                    quantityInput.value = Math.min(Math.max(value, 0), max);
+                    quantityHidden.value = quantityInput.value;
+                    updateConfirm();
+                });
+            }
+        });
+    }
+
+    bindCartForms();
+
+    // Search autocomplete
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            const query = searchInput.value.trim();
+            if (!query) {
+                suggestions.classList.remove('show');
+                suggestions.innerHTML = '';
+                applyFilters();
+                return;
+            }
+            searchTimeout = setTimeout(() => {
+                console.log('Fetching suggestions for:', query);
+                fetch(`/stores/search-suggestions/?search=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => {
+                    console.log('Suggestions response status:', response.status);
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    suggestions.innerHTML = '';
+                    if (data.suggestions && data.suggestions.length) {
+                        data.suggestions.forEach(suggestion => {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.textContent = suggestion.name;
+                            div.addEventListener('click', () => {
+                                searchInput.value = suggestion.name;
+                                suggestions.classList.remove('show');
+                                applyFilters();
+                            });
+                            suggestions.appendChild(div);
+                        });
+                        suggestions.classList.add('show');
+                    } else {
+                        suggestions.classList.remove('show');
+                    }
+                })
+                .catch(error => {
+                    console.error('Suggestions error:', error.message);
+                    suggestions.classList.remove('show');
+                });
+            }, 300);
+        });
+
+        document.addEventListener('mousedown', e => {
+            if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+                suggestions.classList.remove('show');
+                suggestions.innerHTML = '';
+            }
+        });
+    }
 });
 </script>
+<script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
 {% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static store_tags %}
-{% block title %}<strong>IMSUK</strong> - ตะกร้า{% endblock %}
+{% block title %}<strong>IMSUK</strong> - ตะกร้าและชำระเงิน{% endblock %}
 {% block content %}
 <div class="container my-5">
     <!-- Toast Container -->
@@ -13,90 +13,103 @@
         </div>
     </div>
 
-    <h1 class="cart-title mb-4 text-center text-success">ตะกร้าของคุณ</h1>
+    <h1 class="cart-title mb-4 text-center text-success">ตะกร้าและชำระเงิน</h1>
 
     {% if cart_items %}
-    <div class="cart-container">
-        {% for item in cart_items %}
-        <div class="cart-item card mb-3 shadow-sm">
-            <div class="row g-0 align-items-center">
-                <div class="col-md-3 col-4">
-                    <div class="store-image-container">
-                        <img src="{{ item.store.store_image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid store-image" alt="{{ item.store.name }}">
+    <div class="row">
+        <!-- ส่วนตะกร้า -->
+        <div class="col-lg-8">
+            <div class="cart-container">
+                {% for item in cart_items %}
+                <div class="cart-item card mb-3 shadow-sm animate__animated animate__fadeIn">
+                    <div class="row g-0 align-items-center">
+                        <div class="col-md-3 col-4">
+                            <div class="store-image-container">
+                                <img src="{{ item.store.store_image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid store-image" alt="{{ item.store.name }}" loading="lazy">
+                            </div>
+                        </div>
+                        <div class="col-md-9 col-8">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0 fw-bold">{{ item.store.name }}</h5>
+                                    <button class="btn btn-sm btn-outline-danger delete-item" data-store-id="{{ item.store.id }}" aria-label="ลบรายการ {{ item.store.name }}"><i class="fas fa-trash"></i></button>
+                                </div>
+                                <p class="card-text text-muted">ราคา: <span class="item-price">{{ item.store.discounted_price|floatformat:0 }}</span> บาท</p>
+                                <div class="d-flex align-items-center my-2">
+                                    <button class="btn btn-outline-imsuk decrease-quantity" data-store-id="{{ item.store.id }}" aria-label="ลดจำนวน {{ item.store.name }}">-</button>
+                                    <input type="number" class="quantity-input mx-2 form-control" value="{{ item.quantity }}" min="1" max="{{ item.store.quantity_available|default:9999 }}" readonly aria-label="จำนวน {{ item.store.name }}" style="width: 70px;">
+                                    <button class="btn btn-outline-imsuk increase-quantity" data-store-id="{{ item.store.id }}" aria-label="เพิ่มจำนวน {{ item.store.name }}">+</button>
+                                </div>
+                                <p class="card-text fw-bold">รวม: <span class="item-total">{{ item.total_discounted_price|floatformat:0 }}</span> บาท</p>
+                                <!-- สารก่อภูมิแพ้ -->
+                                {% if item.allergens %}
+                                <div class="allergen-list mb-2">
+                                    {% if item.has_allergy_warning %}
+                                    <p class="text-danger fw-bold mb-1"><i class="fas fa-exclamation-triangle"></i> คำเตือน: สินค้านี้อาจมีสารก่อภูมิแพ้ที่คุณแพ้</p>
+                                    {% endif %}
+                                    <div class="d-flex flex-wrap">
+                                        {% for allergen in item.allergens|split:"," %}
+                                        <span class="badge bg-warning text-dark me-1 mb-1">{{ allergen }}</span>
+                                        {% empty %}
+                                        <span class="text-muted">ไม่มีข้อมูล</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <label for="note-{{ item.store.id }}" class="form-label">โน้ตสำหรับร้านค้า</label>
+                                    <textarea name="note" class="form-control note-input" id="note-{{ item.store.id }}" placeholder="เช่น ไม่ใส่ผัก, เผ็ดน้อย" rows="2">{{ item.note }}</textarea>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-9 col-8">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0 fw-bold">{{ item.store.name }}</h5>
-                            <button class="btn btn-sm btn-outline-danger delete-item" data-store-id="{{ item.store.id }}" aria-label="ลบรายการ"><i class="fas fa-trash"></i></button>
-                        </div>
-                        <p class="card-text text-muted">ราคา: {{ item.store.discounted_price|floatformat:0 }} บาท</p>
-                        <div class="d-flex align-items-center my-2">
-                            <button class="btn btn-outline-imsuk decrease-quantity" data-store-id="{{ item.store.id }}" aria-label="ลดจำนวน">-</button>
-                            <input type="number" class="quantity-input mx-2" value="{{ item.quantity }}" min="1" max="{{ item.store.quantity_available|default:9999 }}" readonly aria-label="จำนวน">
-                            <button class="btn btn-outline-imsuk increase-quantity" data-store-id="{{ item.store.id }}" aria-label="เพิ่มจำนวน">+</button>
-                        </div>
-                        <p class="card-text fw-bold">รวม: {{ item.total_discounted_price|floatformat:0 }} บาท</p>
-                        <!-- สารก่อภูมิแพ้ -->
-                        {% if item.allergens %}
-                        <div class="allergen-list mb-2">
-                            {% if item.has_allergy_warning %}
-                            <p class="text-danger fw-bold mb-1"><i class="fas fa-exclamation-triangle"></i> คำเตือน: สินค้านี้อาจมีสารก่อภูมิแพ้ที่คุณแพ้</p>
-                            {% endif %}
-                            {% for allergen in item.allergens|split:"," %}
-                                <span class="allergen">{{ allergen|strip }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        <div class="mt-2">
-                            <label for="note-{{ item.store.id }}" class="form-label">โน้ตสำหรับร้านค้า</label>
-                            <textarea name="note" class="form-control note-input" id="note-{{ item.store.id }}" placeholder="เช่น ไม่ใส่ผัก, เผ็ดน้อย" rows="2">{{ item.note }}</textarea>
-                        </div>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
-        {% endfor %}
-        <div class="cart-summary card p-4 mt-4 shadow-sm">
-            <h4 class="mb-3">สรุปยอด</h4>
-            <div class="d-flex justify-content-upon-between mb-2">
-                <span>ค่าสินค้า:</span>
-                <span>{{ total_price|floatformat:0 }} บาท</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>ค่าส่ง:</span>
-                <span>{{ shipping_fee|floatformat:0 }} บาท</span>
-            </div>
-            <div class="d-flex justify-content-between fw-bold mb-3">
-                <span>ยอดรวม:</span>
-                <span>{{ total_with_shipping|floatformat:0 }} บาท</span>
-            </div>
-            <div class="mb-3">
-                <label for="payment_method" class="form-label">ช่องทางชำระเงิน</label>
-                <select name="payment_method" id="payment_method" class="form-select" aria-label="เลือกช่องทางชำระเงิน">
-                    <option value="promptpay">PromptPay</option>
-                    <option value="credit_card">บัตรเครดิต</option>
-                    <option value="cash">เงินสด</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="address_id" class="form-label">ที่อยู่จัดส่ง</label>
-                <select name="address_id" id="address_id" class="form-select" aria-label="เลือกที่อยู่จัดส่ง">
-                    <option value="">เลือกที่อยู่</option>
-                    {% for address in addresses %}
-                    <option value="{{ address.id }}">{{ address.label }} - {{ address.address_line }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="d-flex justify-content-between align-items-center">
-                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#clearCartModal" aria-label="ล้างตะกร้า">ล้างตะกร้า</button>
-                <form id="checkout-form" method="post" action="{% url 'checkout' %}" class="d-inline">
-                    {% csrf_token %}
-                    <input type="hidden" name="payment_method" id="payment_method_hidden">
-                    <input type="hidden" name="address_id" id="address_id_hidden">
-                    <button type="submit" class="btn btn-imsuk checkout-btn" aria-label="ดำเนินการชำระเงิน">ดำเนินการชำระเงิน</button>
-                </form>
+
+        <!-- ส่วนสรุปและชำระเงิน -->
+        <div class="col-lg-4">
+            <div class="cart-summary card p-4 mt-4 mt-lg-0 shadow-sm sticky-top" style="top: 20px;">
+                <h4 class="mb-3">สรุปคำสั่งซื้อ</h4>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>ค่าสินค้า:</span>
+                    <span class="total-price">{{ total_price|floatformat:0 }} บาท</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>ค่าส่ง:</span>
+                    <span>{{ shipping_fee|floatformat:0 }} บาท</span>
+                </div>
+                <div class="d-flex justify-content-between fw-bold mb-3">
+                    <span>ยอดรวม:</span>
+                    <span class="total-with-shipping">{{ total_with_shipping|floatformat:0 }} บาท</span>
+                </div>
+                <div class="mb-3">
+                    <label for="address_id" class="form-label">ที่อยู่จัดส่ง</label>
+                    <select name="address_id" id="address_id" class="form-select" aria-label="เลือกที่อยู่จัดส่ง" required>
+                        <option value="">เลือกที่อยู่</option>
+                        {% for address in addresses %}
+                        <option value="{{ address.id }}">{{ address.label }} - {{ address.subdistrict }}, {{ address.district }}, {{ address.province }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="payment_method" class="form-label">ช่องทางชำระเงิน</label>
+                    <select name="payment_method" id="payment_method" class="form-select" aria-label="เลือกช่องทางชำระเงิน" required>
+                        <option value="promptpay">PromptPay</option>
+                        <option value="credit_card">บัตรเครดิต</option>
+                        <option value="cash_on_delivery">เงินสดเมื่อรับ</option>
+                    </select>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#clearCartModal" aria-label="ล้างตะกร้า">ล้างตะกร้า</button>
+                    <form id="checkout-form" method="post" action="{% url 'checkout' %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="payment_method" id="payment_method_hidden">
+                        <input type="hidden" name="address_id" id="address_id_hidden">
+                        <button type="submit" class="btn btn-imsuk checkout-btn" aria-label="ยืนยันการชำระเงิน">ยืนยันการชำระเงิน</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -114,7 +127,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <form method="post" class="d-inline">
+                    <form method="post" class="d-inline" action="{% url 'cart' %}">
                         {% csrf_token %}
                         <input type="hidden" name="clear_cart" value="1">
                         <button type="submit" class="btn btn-danger">ล้างตะกร้า</button>
@@ -128,19 +141,19 @@
     <div class="modal fade" id="promptpayModal" tabindex="-1" aria-labelledby="promptpayModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header" style="background-color: var(--imsuk-primary); color: white;">
                     <h5 class="modal-title" id="promptpayModalLabel">ชำระเงินด้วย PromptPay</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-center">
                     <p>กรุณาสแกน QR Code เพื่อชำระเงิน</p>
                     <p class="fw-bold">ยอดชำระ: <span id="promptpay-amount">{{ total_with_shipping|floatformat:0 }}</span> บาท</p>
-                    <img id="promptpay-qr" src="https://via.placeholder.com/200" alt="PromptPay QR Code" class="img-fluid mb-3">
+                    <img id="promptpay-qr" src="https://via.placeholder.com/200" alt="PromptPay QR Code" class="img-fluid mb-3" style="max-width: 200px; border: 2px solid #ddd; padding: 10px; border-radius: 5px;">
                     <p>เวลาคงเหลือ: <span id="countdown">03:00</span></p>
                     <p class="text-muted">กรุณายืนยันการชำระเงินภายในเวลาที่กำหนด มิฉะนั้นต้องเริ่มกระบวนการใหม่</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-confirm-payment confirm-payment-btn" data-amount="{{ total_with_shipping|floatformat:0 }}">ยืนยันการชำระเงิน</button>
+                    <button type="button" class="btn btn-imsuk confirm-payment-btn" data-amount="{{ total_with_shipping|floatformat:0 }}">ยืนยันการชำระเงิน</button>
                 </div>
             </div>
         </div>
@@ -155,37 +168,35 @@
 </div>
 
 <style>
-.promptpay-modal .modal-content {
-    border-radius: 10px;
-}
-.promptpay-modal .modal-header {
-    background-color: var(--imsuk-primary);
-    color: white;
-}
-#promptpay-qr {
-    max-width: 200px;
-    border: 2px solid #ddd;
-    padding: 10px;
+.cart-item .store-image {
+    max-height: 120px;
+    object-fit: cover;
     border-radius: 5px;
 }
-#countdown {
-    font-weight: bold;
-    color: #dc3545;
+.quantity-input {
+    width: 70px;
+    text-align: center;
 }
-.btn-confirm-payment {
-    background-color: #FF69B4;
-    color: white;
-    border: none;
+.allergen-list .badge {
+    font-size: 0.85rem;
 }
-.btn-confirm-payment:hover {
-    background-color: #e55a9b;
+.cart-summary {
+    border-radius: 10px;
+}
+@media (max-width: 576px) {
+    .cart-item .card-body {
+        padding: 10px;
+    }
+    .note-input {
+        font-size: 0.9rem;
+    }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const toastEl = document.getElementById('cartToast');
-    const toast = new bootstrap.Toast(toastEl);
+    const toast = new bootstrap.Toast(toastEl, { delay: 2000 });
     let countdownInterval = null;
 
     {% if messages %}
@@ -197,45 +208,110 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endfor %}
     {% endif %}
 
-    document.querySelectorAll('.increase-quantity, .decrease-quantity').forEach(button => {
-        button.addEventListener('click', function() {
-            const storeId = this.getAttribute('data-store-id');
-            const input = this.parentElement.querySelector('.quantity-input');
-            const noteInput = this.closest('.card-body').querySelector('.note-input');
-            let quantity = parseInt(input.value);
-            const maxQuantity = parseInt(input.getAttribute('max'));
-
-            if (this.classList.contains('increase-quantity') && quantity < maxQuantity) {
-                quantity++;
-            } else if (this.classList.contains('decrease-quantity') && quantity > 1) {
-                quantity--;
-            } else {
-                return;
-            }
-
-            updateCart(storeId, quantity, noteInput.value, input);
-        });
-    });
-
-    document.querySelectorAll('.delete-item').forEach(button => {
-        button.addEventListener('click', function() {
-            const storeId = this.getAttribute('data-store-id');
-            updateCart(storeId, 0, '', null);
-        });
-    });
-
-    document.querySelectorAll('.note-input').forEach(input => {
-        input.addEventListener('change', function() {
-            const storeId = this.closest('.cart-item').querySelector('.delete-item').getAttribute('data-store-id');
-            const quantityInput = this.closest('.card-body').querySelector('.quantity-input');
-            updateCart(storeId, parseInt(quantityInput.value), this.value, quantityInput);
-        });
-    });
-
+    // Optimize DOM queries
+    const cartItems = document.querySelectorAll('.cart-item');
     const checkoutForm = document.getElementById('checkout-form');
-    const checkoutBtn = document.querySelector('.checkout-btn');
+    const checkoutBtn = checkoutForm.querySelector('.checkout-btn');
     const promptpayModal = new bootstrap.Modal(document.getElementById('promptpayModal'));
 
+    // Update cart function
+    function updateCart(storeId, quantity, note, input, button) {
+        if (button) button.disabled = true;
+        const formData = new FormData();
+        formData.append('store_id', storeId);
+        formData.append('quantity', quantity);
+        formData.append('note', note);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 'cart' %}", {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            toastEl.querySelector('.toast-body').textContent = data.message;
+            toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+            toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
+            toast.show();
+
+            if (data.success) {
+                if (quantity === 0) {
+                    const cartItem = document.querySelector(`.cart-item .delete-item[data-store-id="${storeId}"]`).closest('.cart-item');
+                    cartItem.classList.add('animate__animated', 'animate__fadeOut');
+                    setTimeout(() => cartItem.remove(), 500);
+                } else if (input) {
+                    input.value = quantity;
+                    const cartItem = input.closest('.cart-item');
+                    const price = parseFloat(cartItem.querySelector('.item-price').textContent);
+                    cartItem.querySelector('.item-total').textContent = (price * quantity).toFixed(0);
+                }
+
+                const remainingItems = document.querySelectorAll('.cart-item');
+                if (!remainingItems.length) {
+                    location.reload();
+                } else {
+                    let totalPrice = 0;
+                    remainingItems.forEach(item => {
+                        totalPrice += parseFloat(item.querySelector('.item-total').textContent);
+                    });
+                    const shippingFee = {{ shipping_fee|floatformat:0 }};
+                    document.querySelector('.total-price').textContent = `${totalPrice.toFixed(0)} บาท`;
+                    document.querySelector('.total-with-shipping').textContent = `${(totalPrice + shippingFee).toFixed(0)} บาท`;
+                }
+
+                const badge = document.querySelector('#cart-badge');
+                if (badge && data.cart_count !== undefined) {
+                    badge.textContent = data.cart_count;
+                    badge.style.display = data.cart_count > 0 ? 'inline-block' : 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error updating cart:', error);
+            toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการอัปเดตตะกร้า';
+            toastEl.classList.add('bg-danger');
+            toast.show();
+        })
+        .finally(() => {
+            if (button) button.disabled = false;
+        });
+    }
+
+    // Event listeners for quantity buttons
+    cartItems.forEach(item => {
+        const storeId = item.querySelector('.delete-item').dataset.storeId;
+        const input = item.querySelector('.quantity-input');
+        const noteInput = item.querySelector('.note-input');
+
+        item.querySelector('.increase-quantity').addEventListener('click', function() {
+            let quantity = parseInt(input.value);
+            const max = parseInt(input.max);
+            if (quantity < max) {
+                updateCart(storeId, quantity + 1, noteInput.value, input, this);
+            }
+        });
+
+        item.querySelector('.decrease-quantity').addEventListener('click', function() {
+            let quantity = parseInt(input.value);
+            if (quantity > 1) {
+                updateCart(storeId, quantity - 1, noteInput.value, input, this);
+            }
+        });
+
+        item.querySelector('.delete-item').addEventListener('click', function() {
+            updateCart(storeId, 0, '', null, this);
+        });
+
+        noteInput.addEventListener('change', function() {
+            updateCart(storeId, parseInt(input.value), this.value, input);
+        });
+    });
+
+    // Checkout form submission
     checkoutForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const paymentMethod = document.getElementById('payment_method').value;
@@ -245,84 +321,70 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!addressId) {
             toastEl.querySelector('.toast-body').textContent = 'กรุณาเลือกที่อยู่จัดส่ง';
-            toastEl.classList.remove('bg-success', 'bg-warning');
             toastEl.classList.add('bg-danger');
             toast.show();
             return;
         }
 
-        if (paymentMethod === 'promptpay') {
-            checkoutBtn.disabled = true;
-            checkoutBtn.textContent = 'กำลังดำเนินการ...';
+        checkoutBtn.disabled = true;
+        checkoutBtn.textContent = 'กำลังดำเนินการ...';
 
-            // ตรวจสอบข้อมูลก่อนแสดง QR Code
-            const formData = new FormData(checkoutForm);
-            fetch("{% url 'checkout' %}", {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-Checkout-Action': 'validate'
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // แสดง modal พร้อม QR Code
-                    document.getElementById('promptpay-amount').textContent = data.total_with_shipping;
-                    document.getElementById('promptpay-qr').src = data.qr_code_url || 'https://via.placeholder.com/200';
+        const formData = new FormData(checkoutForm);
+        const headers = {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-Checkout-Action': paymentMethod === 'promptpay' ? 'validate' : 'confirm'
+        };
+
+        fetch("{% url 'checkout' %}", { method: 'POST', body: formData, headers })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                if (paymentMethod === 'promptpay') {
+                    document.getElementById('promptpay-amount').textContent = data.total_with_shipping.toFixed(0);
+                    document.getElementById('promptpay-qr').src = data.qr_code_url;
                     startCountdown();
                     promptpayModal.show();
-
-                    // เมื่อปิด modal
                     document.getElementById('promptpayModal').addEventListener('hidden.bs.modal', function() {
                         clearInterval(countdownInterval);
                         toastEl.querySelector('.toast-body').textContent = 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่';
-                        toastEl.classList.remove('bg-success', 'bg-danger');
                         toastEl.classList.add('bg-warning');
                         toast.show();
                         checkoutBtn.disabled = false;
-                        checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+                        checkoutBtn.textContent = 'ยืนยันการชำระเงิน';
                     }, { once: true });
                 } else {
-                    toastEl.querySelector('.toast-body').textContent = data.message || 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล';
-                    toastEl.classList.remove('bg-success', 'bg-warning');
-                    toastEl.classList.add('bg-danger');
+                    toastEl.querySelector('.toast-body').textContent = data.message;
+                    toastEl.classList.add('bg-success');
                     toast.show();
-                    checkoutBtn.disabled = false;
-                    checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+                    window.location.href = data.redirect_url;
                 }
-            })
-            .catch(error => {
-                console.error('Error during checkout validation:', error);
-                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการดำเนินการชำระเงิน กรุณาลองใหม่';
-                toastEl.classList.remove('bg-success', 'bg-warning');
+            } else {
+                toastEl.querySelector('.toast-body').textContent = data.message;
                 toastEl.classList.add('bg-danger');
                 toast.show();
                 checkoutBtn.disabled = false;
-                checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
-            });
-        } else {
-            // สำหรับช่องทางชำระเงินอื่น ๆ ส่งฟอร์มตามปกติ
-            checkoutForm.submit();
-        }
+                checkoutBtn.textContent = 'ยืนยันการชำระเงิน';
+            }
+        })
+        .catch(error => {
+            console.error('Error during checkout:', error);
+            toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการชำระเงิน';
+            toastEl.classList.add('bg-danger');
+            toast.show();
+            checkoutBtn.disabled = false;
+            checkoutBtn.textContent = 'ยืนยันการชำระเงิน';
+        });
     });
 
-    // จัดการปุ่มยืนยันการชำระเงินใน modal
+    // Confirm payment for PromptPay
     document.querySelector('.confirm-payment-btn').addEventListener('click', function() {
-        const amount = this.getAttribute('data-amount');
-        const formData = new FormData(checkoutForm);
-        formData.append('confirm_payment', 'true');
-
         this.disabled = true;
         this.textContent = 'กำลังยืนยัน...';
-
+        const formData = new FormData(checkoutForm);
         fetch("{% url 'checkout' %}", {
             method: 'POST',
             body: formData,
@@ -333,9 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return response.json();
         })
         .then(data => {
@@ -343,13 +403,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 clearInterval(countdownInterval);
                 promptpayModal.hide();
                 toastEl.querySelector('.toast-body').textContent = data.message;
-                toastEl.classList.remove('bg-danger', 'bg-warning');
                 toastEl.classList.add('bg-success');
                 toast.show();
                 window.location.href = data.redirect_url;
             } else {
-                toastEl.querySelector('.toast-body').textContent = data.message || 'การชำระเงินล้มเหลว';
-                toastEl.classList.remove('bg-success', 'bg-warning');
+                toastEl.querySelector('.toast-body').textContent = data.message;
                 toastEl.classList.add('bg-danger');
                 toast.show();
                 this.disabled = false;
@@ -359,7 +417,6 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error confirming payment:', error);
             toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการยืนยันการชำระเงิน';
-            toastEl.classList.remove('bg-success', 'bg-warning');
             toastEl.classList.add('bg-danger');
             toast.show();
             this.disabled = false;
@@ -368,101 +425,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function startCountdown() {
-        let timeLeft = 180; // 3 นาที (180 วินาที)
+        let timeLeft = 180;
         const countdownEl = document.getElementById('countdown');
-
-        if (countdownInterval) {
-            clearInterval(countdownInterval);
-        }
-
+        if (countdownInterval) clearInterval(countdownInterval);
         countdownInterval = setInterval(() => {
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
             countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             timeLeft--;
-
             if (timeLeft < 0) {
                 clearInterval(countdownInterval);
                 promptpayModal.hide();
                 toastEl.querySelector('.toast-body').textContent = 'หมดเวลาการชำระเงิน กรุณาลองใหม่';
-                toastEl.classList.remove('bg-success', 'bg-danger');
                 toastEl.classList.add('bg-warning');
                 toast.show();
                 checkoutBtn.disabled = false;
-                checkoutBtn.textContent = 'ดำเนินการชำระเงิน';
+                checkoutBtn.textContent = 'ยืนยันการชำระเงิน';
             }
         }, 1000);
-    }
-
-    function updateCart(storeId, quantity, note, input) {
-        const formData = new FormData();
-        formData.append('store_id', storeId);
-        formData.append('quantity', quantity);
-        formData.append('note', note);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-        fetch("{% url 'cart' %}", {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            toastEl.querySelector('.toast-body').textContent = data.message;
-            toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
-            toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
-            toast.show();
-
-            if (data.success) {
-                if (quantity === 0) {
-                    const cartItem = document.querySelector(`.delete-item[data-store-id="${storeId}"]`).closest('.cart-item');
-                    if (cartItem) {
-                        cartItem.remove();
-                    }
-                } else if (input) {
-                    input.value = quantity;
-                    const cartItem = input.closest('.cart-item');
-                    const price = parseFloat(cartItem.querySelector('.card-text.text-muted').textContent.match(/[\d.]+/)[0]);
-                    const totalPriceEl = cartItem.querySelector('.card-text.fw-bold');
-                    totalPriceEl.textContent = `รวม: ${(price * quantity).toFixed(0)} บาท`;
-                }
-
-                const cartItems = document.querySelectorAll('.cart-item');
-                if (cartItems.length === 0) {
-                    location.reload();
-                } else {
-                    let totalPrice = 0;
-                    cartItems.forEach(item => {
-                        const itemTotal = parseFloat(item.querySelector('.card-text.fw-bold').textContent.match(/[\d.]+/)[0]);
-                        totalPrice += itemTotal;
-                    });
-                    const shippingFee = {{ shipping_fee }};
-                    document.querySelector('.cart-summary .d-flex.mb-2:nth-child(1) span:last-child').textContent = `${totalPrice.toFixed(0)} บาท`;
-                    document.querySelector('.cart-summary .d-flex.fw-bold span:last-child').textContent = `${(totalPrice + shippingFee).toFixed(0)} บาท`;
-                }
-
-                const badge = document.querySelector('.cart-badge');
-                if (badge) {
-                    const cartCount = Array.from(document.querySelectorAll('.quantity-input')).reduce((sum, input) => sum + parseInt(input.value), 0);
-                    badge.textContent = cartCount;
-                    badge.style.display = cartCount > 0 ? 'inline-block' : 'none';
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error updating cart:', error);
-            toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการอัปเดตตะกร้า กรุณาลองใหม่';
-            toastEl.classList.remove('bg-danger', 'bg-success', 'bg-warning');
-            toastEl.classList.add('bg-danger');
-            toast.show();
-        });
     }
 });
 </script>

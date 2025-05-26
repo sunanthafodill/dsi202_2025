@@ -1,0 +1,49 @@
+{% for store in page_obj %}
+<div class="col-6 col-md-4">
+    <div class="store-card card shadow-sm">
+        <a href="{% url 'store_detail' store.id %}">
+            <img src="{{ store.store_image.url|default:'https://via.placeholder.com/300' }}" class="card-img-top" alt="{{ store.name }}">
+        </a>
+        <div class="card-body">
+            <a href="{% url 'store_detail' store.id %}" class="text-decoration-none">
+                <h5 class="card-title">{{ store.name }}</h5>
+            </a>
+            <p class="additional-details">{{ store.additional_details|truncatechars:50|default:"อาหารคุณภาพ ลดขยะอาหาร" }}</p>
+            <div class="price-section">
+                {% if store.discount_percentage > 0 %}
+                <span class="badge badge-discount me-2">-{{ store.discount_percentage|floatformat:0 }}%</span>
+                <span class="discounted-price">{{ store.discounted_price|floatformat:0 }} บาท</span>
+                <span class="original-price ms-2">{{ store.price|floatformat:0 }} บาท</span>
+                {% else %}
+                <span class="discounted-price">{{ store.price|floatformat:0 }} บาท</span>
+                {% endif %}
+            </div>
+            <p class="opening-hours">
+                <i class="fas fa-clock"></i>
+                {{ store.available_from|time:"H:i" }} - {{ store.available_until|time:"H:i" }}
+            </p>
+            <form method="post" id="add-to-cart-form-{{ store.id }}" class="add-to-cart-form" data-store-id="{{ store.id }}" data-store-name="{{ store.name }}">
+                {% csrf_token %}
+                <input type="hidden" name="store_id" value="{{ store.id|safe }}">
+                <input type="hidden" name="quantity" value="1" class="quantity-hidden" data-max="{{ store.quantity_available|default:0 }}">
+                <div class="cart-controls">
+                    {% if store.quantity_available > 0 %}
+                    <button type="button" class="btn btn-imsuk add-to-cart-btn" aria-label="เพิ่ม {{ store.name }} ลงตะกร้า" {% if not user.is_authenticated %}disabled title="กรุณาเข้าสู่ระบบ"{% endif %}>
+                        <i class="fas fa-cart-plus me-2"></i>เพิ่ม
+                    </button>
+                    {% else %}
+                    <p class="text-danger stock-low">สินค้าหมด</p>
+                    {% endif %}
+                </div>
+            </form>
+            {% if store.quantity_available <= 5 and store.quantity_available > 0 %}
+            <p class="stock-low">สต็อกเหลือน้อย</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="col-12 text-center">
+    <p class="text-muted">ไม่มีร้านค้าที่ตรงกับการค้นหา</p>
+</div>
+{% endfor %}

@@ -7,6 +7,9 @@
     --imsuk-text: #333333; /* เทาเข้ม */
     --imsuk-muted: #6c757d; /* เทาอ่อน */
 }
+.btn-imsuk { background: var(--imsuk-primary); color: white; }
+.btn-imsuk:hover { background: #2E5F2F; }
+.badge-discount { background: var(--imsuk-accent); color: white; }
 
 /* General */
 body {
@@ -19,9 +22,36 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--imsuk-primary);
 }
 
+/* IMSUK Bold Style */
+.imsuk-bold {
+    font-weight: 900;
+    -webkit-text-stroke: 0.6px var(--imsuk-primary);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-size: 1.25em;
+    color: #EFACA5;
+    letter-spacing: 0.03em;
+    display: inline-block;
+    animation: glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 5px rgba(239, 172, 165, 0.5);
+    }
+    to {
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(239, 172, 165, 0.8);
+    }
+}
+
 /* Navbar */
 .navbar {
     background-color: var(--imsuk-primary);
+}
+.imsuk-logo-nav {
+    height: 32px; /* ขนาดสมดุล */
+    width: auto;
+    max-width: 150px; /* ป้องกันกว้างเกิน */
+    object-fit: contain;
 }
 
 .cart-badge {
@@ -35,6 +65,22 @@ h1, h2, h3, h4, h5, h6 {
     left: -5px;
 }
 
+/* Footer */
+.imsuk-logo-footer {
+    width: 200px;
+    height: auto;
+    max-height: 60px;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
+    loading: lazy;
+}
+@media (max-width: 576px) {
+    .imsuk-logo-footer {
+        width: 150px;
+        max-height: 45px;
+    }
+}
+
 /* Mission Statement */
 .mission-statement {
     text-align: center;
@@ -44,7 +90,6 @@ h1, h2, h3, h4, h5, h6 {
 .mission-statement h2 {
     font-size: 1.8rem;
     font-weight: 700;
-    color: var(--imsuk-primary);
 }
 
 .mission-statement p {
@@ -105,7 +150,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--imsuk-primary);
-    margin-bottom: 0.5rem;
 }
 
 /* Store Detail Images */
@@ -132,7 +176,6 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
-    justify-content: flex-start;
 }
 
 .additional-image {
@@ -141,7 +184,6 @@ h1, h2, h3, h4, h5, h6 {
     object-fit: cover;
     border-radius: 8px;
     border: 1px solid var(--imsuk-secondary);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
 }
 
@@ -159,21 +201,18 @@ h1, h2, h3, h4, h5, h6 {
 /* Allergen Styles */
 .allergen {
     display: inline-block;
-    border: 1px solid var(--imsuk-primary);
+    background-color: #FFF3CD;
+    color: var(--imsuk-text);
+    padding: 0.3rem 0.6rem;
+    margin: 0.2rem;
     border-radius: 5px;
-    padding: 5px 10px;
-    margin: 3px;
-    background-color: #e8f5e9;
-    color: var(--imsuk-primary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 /* Store Name */
 .store-name {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--imsuk-primary);
-    margin-bottom: 0.5rem;
 }
 
 /* Additional Details */
@@ -181,7 +220,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
     line-height: 1.8;
     color: var(--imsuk-text);
-    margin-bottom: 1rem;
 }
 
 /* Price Section */
@@ -190,7 +228,6 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
 }
 
 .discounted-price {
@@ -218,21 +255,19 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
     line-height: 1.8;
     color: var(--imsuk-text);
-    margin-bottom: 1rem;
 }
 
 /* Opening Hours */
 .opening-hours {
     font-size: 1rem;
-    color: #000000;
+    color: var(--imsuk-text);
     display: flex;
     align-items: center;
-    margin-bottom: 1rem;
 }
 
 .clock-icon {
     margin-right: 0.5rem;
-    color: #000000;
+    color: var(--imsuk-primary);
 }
 
 /* Cart Controls */
@@ -251,79 +286,10 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1rem;
 }
 
-/* Cart Image Styles */
-.store-image-container {
-    width: 150px;
-    height: 150px;
-    overflow: hidden;
-    border-radius: 8px;
-    border: 2px solid var(--imsuk-secondary);
-    margin: 0 auto;
-}
-
-.store-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.store-image:hover {
-    transform: scale(1.05);
-}
-
-/* Accordion for Order History */
-.accordion-item {
-    border: none;
-    border-radius: 10px;
-    overflow: hidden;
-    background-color: #FFFFFF;
-}
-
-.accordion-button {
-    background-color: var(--imsuk-secondary);
-    color: var(--imsuk-primary);
-    font-weight: 600;
-    padding: 1.25rem;
-    border-radius: 10px !important;
-}
-
-.accordion-button:not(.collapsed) {
-    background-color: var(--imsuk-primary);
-    color: white;
-}
-
-.accordion-button:focus {
-    box-shadow: none;
-    outline: 2px solid var(--imsuk-secondary);
-}
-
-.accordion-body {
-    background-color: #FFFFFF;
-    padding: 1.5rem;
-}
-
-.badge {
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-}
-
-.delete-order {
-    transition: all 0.3s ease;
-}
-
-.delete-order:hover {
-    background-color: var(--imsuk-accent);
-    color: white;
-    border-color: var(--imsuk-accent);
-    transform: scale(1.05);
-}
-
 /* Buttons */
 .btn-imsuk {
-    background-color: var(--imsuk-secondary);
-    color: var(--imsuk-primary);
+    background-color: var(--imsuk-primary);
+    color: white;
     border: none;
     padding: 0.75rem 1.5rem;
     font-weight: 600;
@@ -332,12 +298,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-imsuk:hover {
-    background-color: #A8C66B;
+    background-color: #2E5F2F;
     transform: scale(1.05);
 }
 
 .btn-outline-imsuk {
-    border: 1px solid var(--imsuk-secondary);
+    border: 1px solid var(--imsuk-primary);
     color: var(--imsuk-primary);
     background-color: transparent;
     padding: 0.5rem 1rem;
@@ -347,30 +313,26 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-outline-imsuk:hover {
-    background-color: var(--imsuk-secondary);
-    color: var(--imsuk-primary);
-    transform: scale(1.05);
+    background-color: var(--imsuk-primary);
+    color: white;
 }
 
-.btn-imsuk-nav {
-    background-color: transparent;
-    border: 1px solid var(--imsuk-secondary);
-    color: var(--imsuk-secondary);
+.btn-pink {
+    background-color: var(--imsuk-accent);
+    color: white;
+    border: none;
     padding: 0.5rem 1rem;
     border-radius: 5px;
-    transition: all 0.3s ease;
 }
 
-.btn-imsuk-nav:hover {
-    background-color: var(--imsuk-secondary);
-    color: var(--imsuk-primary);
+.btn-pink:hover {
+    background-color: #E55A9F;
 }
 
 /* Toast */
 .toast {
-    border: 2px solid var(--imsuk-secondary);
+    border: 2px solid var(--imsuk-primary);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .bg-success {
@@ -403,229 +365,65 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Modal */
 .modal-content {
-    border: 2px solid var(--imsuk-secondary);
+    border: 2px solid var(--imsuk-primary);
     border-radius: 10px;
 }
 
 /* Form */
 .form-control {
-    border: 1px solid var(--imsuk-secondary);
+    border: 1px solid var(--imsuk-primary);
     border-radius: 5px;
-    transition: border-color 0.3s ease;
 }
 
 .form-control:focus {
-    border-color: var(--imsuk-primary);
-    box-shadow: 0 0 0 0.2rem rgba(63, 130, 64, 0.25);
+    border-color: var(--imsuk-secondary);
+    box-shadow: 0 0 0 0.2rem rgba(186, 222, 128, 0.25);
 }
 
-.form-label {
+/* Pagination */
+.pagination .page-link {
     color: var(--imsuk-primary);
-    font-weight: 500;
+    border: 1px solid var(--imsuk-primary);
 }
 
-/* Focus States */
-.store-card:focus-within,
-.btn-imsuk:focus,
-.btn-outline-imsuk:focus,
-.quantity-input:focus {
-    outline: 2px solid var(--imsuk-secondary);
-    outline-offset: 2px;
+.pagination .page-item.active .page-link {
+    background-color: var(--imsuk-primary);
+    border-color: var(--imsuk-primary);
+    color: white;
 }
 
-/* Logo Styles */
-.imsuk-logo-nav {
-    height: 35px;
-    width: auto;
-    object-fit: contain;
-    transition: transform 0.3s ease;
-}
-
-.imsuk-logo-nav:hover {
-    transform: scale(1.05);
-}
-
-.imsuk-logo-footer {
-    height: 25px;
-    width: auto;
-    object-fit: contain;
-}
-
-.imsuk-logo-home {
-    height: 70px;
-    width: auto;
-    object-fit: contain;
-    margin-bottom: 1rem;
-}
-
-.imsuk-logo-form {
-    height: 55px;
-    width: auto;
-    object-fit: contain;
+/* Reviews */
+.review {
+    border: 1px solid var(--imsuk-primary);
+    border-radius: 8px;
 }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-    .store-card {
-        padding: 15px;
+    .imsuk-bold {
+        font-size: 1.15em;
+        -webkit-text-stroke: 0.5px var(--imsuk-primary);
     }
-
     .store-card .card-img-top {
         max-height: 150px;
     }
-
     .store-image {
         max-height: 300px;
     }
-
-    .store-image-container {
-        width: 100px;
-        height: 100px;
-    }
-
-    .additional-image {
-        width: 100px;
-        height: 100px;
-    }
-
-    .carousel-item img {
-        max-height: 400px;
-    }
-
     .store-name {
         font-size: 1.5rem;
     }
-
     .discounted-price {
         font-size: 1.3rem;
     }
-
-    .price-section {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .btn-imsuk,
-    .btn-outline-imsuk {
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
-    }
-
-    .quantity-input {
-        width: 50px;
-    }
-
-    .additional-details,
-    .store-description {
-        font-size: 0.9rem;
-    }
-
-    .opening-hours {
-        font-size: 0.9rem;
-    }
-
-    .allergen {
-        font-size: 0.8rem;
-        padding: 3px 8px;
-    }
-
-    .imsuk-logo-nav {
-        height: 30px;
-    }
-
-    .imsuk-logo-home {
-        height: 60px;
-    }
-
-    .imsuk-logo-form {
-        height: 45px;
-    }
-
-    .imsuk-logo-footer {
-        height: 20px;
-    }
-
-    .accordion-button {
-        padding: 1rem;
-        font-size: 0.9rem;
-    }
-
-    .accordion-body {
-        padding: 1rem;
-    }
 }
 
 @media (max-width: 576px) {
-    .pagination {
-        flex-wrap: wrap;
+    .imsuk-bold {
+        font-size: 1.05em;
+        -webkit-text-stroke: 0.4px var(--imsuk-primary);
     }
-
-    .btn-imsuk {
-        margin: 0.5rem 0;
-    }
-
     .store-image {
         max-height: 250px;
-    }
-
-    .additional-image {
-        width: 80px;
-        height: 80px;
-    }
-
-    .carousel-item img {
-        max-height: 300px;
-    }
-
-    .imsuk-logo-nav {
-        height: 25px;
-    }
-
-    .imsuk-logo-home {
-        height: 50px;
-    }
-
-    .imsuk-logo-form {
-        height: 40px;
-    }
-
-    .imsuk-logo-footer {
-        height: 18px;
-    }
-}
-/* IMSUK Bold Style */
-.imsuk-bold {
-    font-weight: 900; /* น้ำหนักสูงสุดของ Prompt */
-    -webkit-text-stroke: 0.6px #3F8240; /* ขอบตัวอักษรสีเขียวเข้ม */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* เงาเข้มเพื่อเพิ่มมิติ */
-    font-size: 1.25em; /* ขนาดใหญ่ขึ้นเล็กน้อย */
-    color: #EFACA5; /* สีชมพูอ่อนเพื่อความเด่น */
-    letter-spacing: 0.03em; /* ระยะห่างตัวอักษร */
-    display: inline-block; /* เพื่อให้ stroke และ animation ทำงาน */
-    animation: glow 1.5s ease-in-out infinite alternate; /* อนิเมชันเรืองแสง */
-}
-
-/* อนิเมชัน glow */
-@keyframes glow {
-    from {
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 5px rgba(239, 172, 165, 0.5);
-    }
-    to {
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(239, 172, 165, 0.8);
-    }
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .imsuk-bold {
-        font-size: 1.15em; /* ลดขนาดในแท็บเล็ต */
-        -webkit-text-stroke: 0.5px #3F8240; /* ขอบบางลง */
-    }
-}
-
-@media (max-width: 576px) {
-    .imsuk-bold {
-        font-size: 1.05em; /* ลดขนาดในมือถือ */
-        -webkit-text-stroke: 0.4px #3F8240; /* ขอบบางลง */
     }
 }

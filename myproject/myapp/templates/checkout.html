@@ -1,62 +1,59 @@
 {% extends 'base.html' %}
-{% block title %}IMSUK - ชำระเงิน{% endblock %}
+{% load static %}
+{% block extra_head %}
+<meta name="description" content="ชำระเงินสำเร็จกับ IMSUK - ดูรายละเอียดคำสั่งซื้อและช่วยลดขยะอาหาร">
+<meta name="keywords" content="IMSUK, ชำระเงินสำเร็จ, ลดขยะอาหาร, สั่งอาหาร">
+{% endblock %}
+{% block title %}<span class="imsuk-bold">IMSUK</span> - ชำระเงินสำเร็จ{% endblock %}
 {% block content %}
 <div class="container my-5">
-    <h1 class="cart-title mb-4">ชำระเงิน</h1>
-    <div class="toast-container position-fixed top-0 end-0 p-3">
-        <div id="cartToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <strong class="me-auto">แจ้งเตือน</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body"></div>
+    <div class="success-section text-center p-5 bg-white rounded shadow-sm animate__animated animate__fadeIn" aria-describedby="success-message">
+        <i class="fas fa-check-circle text-success mb-3" style="font-size: 3rem;" aria-hidden="true"></i>
+        <h1 class="text-success mb-4" id="success-message">ชำระเงินสำเร็จ! ขอบคุณสำหรับคำสั่งซื้อ</h1>
+        <p class="text-muted mb-4">การสั่งซื้อของคุณช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น!</p>
+        <div class="order-details mx-auto card p-4" style="max-width: 600px;">
+            <h5 class="fw-bold mb-3">รายละเอียดคำสั่งซื้อ</h5>
+            <p><strong>หมายเลขคำสั่งซื้อ:</strong> {{ order.order_number }}</p>
+            <p><strong>ยอดรวม:</strong> {{ order.total_with_shipping|floatformat:0 }} บาท</p>
+            <p><strong>ช่องทางชำระเงิน:</strong> {{ order.get_payment_method_display }}</p>
+            <p><strong>ที่อยู่จัดส่ง:</strong> {{ order.delivery_address.address_line }}, {{ order.delivery_address.subdistrict }}, {{ order.delivery_address.district }}, {{ order.delivery_address.province }} {{ order.delivery_address.postal_code }}</p>
+            <p><strong>เวลาคาดการณ์:</strong> {{ order.estimated_time|date:"H:i, d/m/Y" }}</p>
+            <h6 class="mt-3">รายการสินค้า</h6>
+            <ul class="list-group list-group-flush">
+                {% for item in order.items.all %}
+                <li class="list-group-item">{{ item.store.name }} x{{ item.quantity }} - {{ item.total_price|floatformat:0 }} บาท</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="action-buttons mt-4">
+            <a href="{% url 'store_list' %}" class="btn btn-imsuk m-2" aria-label="กลับไปที่ร้านค้า">
+                <i class="fas fa-store me-2" aria-hidden="true"></i>กลับไปที่ร้านค้า
+            </a>
+            <a href="{% url 'order_history' %}" class="btn btn-outline-imsuk m-2" aria-label="ดูประวัติคำสั่งซื้อ">
+                <i class="fas fa-history me-2" aria-hidden="true"></i>ดูประวัติคำสั่งซื้อ
+            </a>
+            {% if order.status != 'completed' %}
+            <a href="{% url 'track_delivery' order.id %}" class="btn btn-outline-imsuk m-2" aria-label="ติดตามการจัดส่ง">
+                <i class="fas fa-truck me-2" aria-hidden="true"></i>ติดตามการจัดส่ง
+            </a>
+            {% endif %}
+        </div>
+        <div class="engagement mt-4">
+            <p class="text-muted">ช่วยเราลดขยะอาหารมากขึ้น! แชร์ประสบการณ์ของคุณ:</p>
+            <a href="https://twitter.com/intent/tweet?text=เพิ่งสั่งอาหารจาก IMSUK! ช่วยลดขยะอาหารและสนับสนุนร้านค้าท้องถิ่น 🌱 #IMSUK" class="btn btn-outline-imsuk m-1" aria-label="แชร์บน Twitter">
+                <i class="fab fa-twitter me-2" aria-hidden="true"></i>แชร์บน Twitter
+            </a>
         </div>
     </div>
-    {% if cart_items %}
-    <div class="cart-container">
-        {% for item in cart_items %}
-        <div class="cart-item card mb-3 animate__animated animate__fadeIn">
-            <div class="row g-0 align-items-center">
-                <div class="col-md-3 col-4">
-                    <img src="{{ item.store.image.url|default:'https://via.placeholder.com/150' }}" class="img-fluid rounded-start" alt="{{ item.store.name }}" style="max-height: 120px; object-fit: cover;">
-                </div>
-                <div class="col-md-9 col-8">
-                    <div class="card-body">
-                        <h5 class="card-title mb-0">{{ item.store.name }}</h5>
-                        <p class="card-text text-muted">ราคา: {{ item.store.discounted_price }} บาท</p>
-                        <p class="card-text">จำนวน: {{ item.quantity }}</p>
-                        <p class="card-text fw-bold">รวม: {{ item.total_discounted_price }} บาท</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-        <div class="cart-summary card p-3 mt-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">ยอดรวม: {{ total_price }} บาท</h4>
-                <a href="#" class="btn btn-imsuk">ยืนยันการสั่งซื้อ</a>
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-        <p class="text-muted">ตะกร้าของคุณว่างเปล่า</p>
-        <a href="{% url 'store_list' %}" class="btn btn-imsuk">ไปที่ร้านค้า</a>
-    </div>
-    {% endif %}
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const toastEl = document.getElementById('cartToast');
-        const toast = new bootstrap.Toast(toastEl);
-        {% if messages %}
-        {% for message in messages %}
-        toastEl.querySelector('.toast-body').textContent = "{{ message }}";
-        toastEl.classList.add('bg-{{ message.tags }}');
-        toast.show();
-        {% endfor %}
-        {% endif %}
-    });
-</script>
+<style>
+.order-details {
+    background-color: var(--imsuk-bg);
+    border-radius: 8px;
+}
+.list-group-item {
+    background-color: transparent;
+    border: none;
+}
+</style>
 {% endblock %}
