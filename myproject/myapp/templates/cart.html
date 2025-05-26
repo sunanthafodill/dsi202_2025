@@ -107,6 +107,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="payment_method" id="payment_method_hidden">
                         <input type="hidden" name="address_id" id="address_id_hidden">
+                        <input type="hidden" name="total_with_shipping" id="total_with_shipping_hidden" value="{{ total_with_shipping|floatformat:2 }}">
                         <button type="submit" class="btn btn-imsuk checkout-btn" aria-label="ยืนยันการชำระเงิน">ยืนยันการชำระเงิน</button>
                     </form>
                 </div>
@@ -208,13 +209,11 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endfor %}
     {% endif %}
 
-    // Optimize DOM queries
     const cartItems = document.querySelectorAll('.cart-item');
     const checkoutForm = document.getElementById('checkout-form');
     const checkoutBtn = checkoutForm.querySelector('.checkout-btn');
     const promptpayModal = new bootstrap.Modal(document.getElementById('promptpayModal'));
 
-    // Update cart function
     function updateCart(storeId, quantity, note, input, button) {
         if (button) button.disabled = true;
         const formData = new FormData();
@@ -261,6 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const shippingFee = {{ shipping_fee|floatformat:0 }};
                     document.querySelector('.total-price').textContent = `${totalPrice.toFixed(0)} บาท`;
                     document.querySelector('.total-with-shipping').textContent = `${(totalPrice + shippingFee).toFixed(0)} บาท`;
+                    document.getElementById('total_with_shipping_hidden').value = (totalPrice + shippingFee).toFixed(2);
                 }
 
                 const badge = document.querySelector('#cart-badge');
@@ -281,7 +281,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Event listeners for quantity buttons
     cartItems.forEach(item => {
         const storeId = item.querySelector('.delete-item').dataset.storeId;
         const input = item.querySelector('.quantity-input');
@@ -311,7 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Checkout form submission
     checkoutForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const paymentMethod = document.getElementById('payment_method').value;
@@ -345,17 +343,23 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 if (paymentMethod === 'promptpay') {
                     document.getElementById('promptpay-amount').textContent = data.total_with_shipping.toFixed(0);
-                    document.getElementById('promptpay-qr').src = data.qr_code_url;
-                    startCountdown();
-                    promptpayModal.show();
-                    document.getElementById('promptpayModal').addEventListener('hidden.bs.modal', function() {
-                        clearInterval(countdownInterval);
-                        toastEl.querySelector('.toast-body').textContent = 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่';
-                        toastEl.classList.add('bg-warning');
+                    document.getElementById('promptpay-qr').src = data.qr_code_url || 'https://via.placeholder.com/200';
+                    if (!data.qr_code_url) {
+                        toastEl.querySelector('.toast-body').textContent = 'ไม่สามารถสร้าง QR Code ได้';
+                        toastEl.classList.add('bg-danger');
                         toast.show();
-                        checkoutBtn.disabled = false;
-                        checkoutBtn.textContent = 'ยืนยันการชำระเงิน';
-                    }, { once: true });
+                    } else {
+                        startCountdown();
+                        promptpayModal.show();
+                        document.getElementById('promptpayModal').addEventListener('hidden.bs.modal', function() {
+                            clearInterval(countdownInterval);
+                            toastEl.querySelector('.toast-body').textContent = 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่';
+                            toastEl.classList.add('bg-warning');
+                            toast.show();
+                            checkoutBtn.disabled = false;
+                            checkoutBtn.textContent = 'ยืนยันการชำระเงิน';
+                        }, { once: true });
+                    }
                 } else {
                     toastEl.querySelector('.toast-body').textContent = data.message;
                     toastEl.classList.add('bg-success');
@@ -380,7 +384,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Confirm payment for PromptPay
     document.querySelector('.confirm-payment-btn').addEventListener('click', function() {
         this.disabled = true;
         this.textContent = 'กำลังยืนยัน...';

@@ -17,8 +17,113 @@ from datetime import timedelta
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import never_cache
 import logging
+import libscrc  # เพิ่มสำหรับ QR Code
+import qrcode  # เพิ่มสำหรับ QR Code
+from PIL import Image  # เพิ่มสำหรับ QR Code
+import io  # เพิ่มสำหรับ QR Code
+import base64  # เพิ่มสำหรับ QR Code
+from django.conf import settings  # เพิ่มเพื่อใช้ PROMPTPAY_MOBILE
 
 logger = logging.getLogger(__name__)
+
+# ค่าคงที่สำหรับ PromptPay QR Code
+TAG_PAYLOAD_FORMAT_INDICATOR = "00"
+TAG_POINT_OF_INITIATION_METHOD = "01"
+TAG_MERCHANT_ACCOUNT_INFORMATION = "29"
+SUB_TAG_AID_PROMPTPAY = "00"
+SUB_TAG_MOBILE_NUMBER_PROMPTPAY = "01"
+SUB_TAG_NATIONAL_ID_PROMPTPAY = "02"
+TAG_TRANSACTION_CURRENCY = "53"
+TAG_TRANSACTION_AMOUNT = "54"
+TAG_COUNTRY_CODE = "58"
+TAG_CRC = "63"
+
+VALUE_PAYLOAD_FORMAT_INDICATOR = "01"
+VALUE_POINT_OF_INITIATION_MULTIPLE = "11"
+VALUE_POINT_OF_INITIATION_ONETIME = "12"
+VALUE_PROMPTPAY_AID = "A000000677010111"
+VALUE_COUNTRY_CODE_TH = "TH"
+VALUE_CURRENCY_THB = "764"
+LEN_CRC_VALUE_HEX = "04"
+
+class QRError(Exception):
+    pass
+
+class InvalidInputError(QRError):
+    pass
+
+def _format_tlv(tag: str, value: str) -> str:
+    length_str = f"{len(value):02d}"
+    return f"{tag}{length_str}{value}"
+
+def calculate_crc(code_string: str) -> str:
+    try:
+        encoded_string = str.encode(code_string, 'ascii')
+    except UnicodeEncodeError:
+        raise InvalidInputError("Payload contains non-ASCII characters.")
+    crc_val = libscrc.ccitt_false(encoded_string)
+    crc_hex_str = hex(crc_val)[2:].upper()
+    return crc_hex_str.rjust(4, '0')
+
+def generate_promptpay_qr_payload(mobile=None, nid=None, amount=None, one_time=False):
+    if not mobile and not nid:
+        raise InvalidInputError("Either mobile number or National ID (NID) must be provided.")
+    if mobile and nid:
+        raise InvalidInputError("Provide either mobile number or National ID (NID), not both.")
+
+    payload_elements = [
+        _format_tlv(TAG_PAYLOAD_FORMAT_INDICATOR, VALUE_PAYLOAD_FORMAT_INDICATOR),
+        _format_tlv(TAG_POINT_OF_INITIATION_METHOD, VALUE_POINT_OF_INITIATION_ONETIME if one_time else VALUE_POINT_OF_INITIATION_MULTIPLE)
+    ]
+
+    merchant_account_sub_elements = [_format_tlv(SUB_TAG_AID_PROMPTPAY, VALUE_PROMPTPAY_AID)]
+    if mobile:
+        mobile_cleaned = mobile.strip()
+        if not (len(mobile_cleaned) == 10 and mobile_cleaned.isdigit()):
+            raise InvalidInputError("Mobile number must be a 10-digit string.")
+        formatted_mobile_value = f"00{VALUE_COUNTRY_CODE_TH}{mobile_cleaned[1:]}"
+        merchant_account_sub_elements.append(_format_tlv(SUB_TAG_MOBILE_NUMBER_PROMPTPAY, formatted_mobile_value))
+    elif nid:
+        nid_cleaned = nid.strip().replace('-', '')
+        if not (len(nid_cleaned) == 13 and nid_cleaned.isdigit()):
+            raise InvalidInputError("National ID (NID) must be a 13-digit string.")
+        merchant_account_sub_elements.append(_format_tlv(SUB_TAG_NATIONAL_ID_PROMPTPAY, nid_cleaned))
+    
+    payload_elements.append(_format_tlv(TAG_MERCHANT_ACCOUNT_INFORMATION, "".join(merchant_account_sub_elements)))
+    payload_elements.append(_format_tlv(TAG_TRANSACTION_CURRENCY, VALUE_CURRENCY_THB))
+
+    if amount is not None:
+        amount_str_eval = str(amount).strip()
+        if amount_str_eval:
+            try:
+                amount_float = float(amount_str_eval)
+                if amount_float != 0.0:
+                    if amount_float < 0:
+                        raise InvalidInputError("Transaction amount cannot be negative.")
+                    formatted_amount_value = f"{amount_float:.2f}"
+                    payload_elements.append(_format_tlv(TAG_TRANSACTION_AMOUNT, formatted_amount_value))
+            except ValueError:
+                raise InvalidInputError(f"Invalid amount value: '{amount}'.")
+
+    payload_elements.append(_format_tlv(TAG_COUNTRY_CODE, VALUE_COUNTRY_CODE_TH))
+    data_for_crc_calculation = "".join(payload_elements)
+    string_to_calculate_crc_on = data_for_crc_calculation + TAG_CRC + LEN_CRC_VALUE_HEX
+    crc_hex_value = calculate_crc(string_to_calculate_crc_on)
+    return (string_to_calculate_crc_on + crc_hex_value).upper()
+
+def generate_qr_image(payload):
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(payload)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    return img_byte_arr.getvalue()
 
 def signup(request):
     if request.method == 'POST':
@@ -353,7 +458,7 @@ def checkout(request):
         messages.warning(request, "กรุณาล็อกอินเพื่อดำเนินการชำระเงิน")
         return redirect('login')
 
-    cart_items = Cart.objects.filter(user=request.user)
+    cart_items = Cart.objects.filter(user=request.user).select_related('store')
     total_price = sum(item.total_discounted_price or 0 for item in cart_items)
     shipping_fee = 5.0
     total_with_shipping = total_price + shipping_fee
@@ -375,7 +480,7 @@ def checkout(request):
 
         if not address_id or not payment_method:
             if is_ajax:
-                return JsonResponse({'success': False, 'message': 'กรุณาเลือกที่อยู่จัดส่งและช่องทางชำระเงิน'}, status=400)
+                return JsonResponse({'success': False, 'message': 'กรุณาเลือกที่อยู่จัดส่งและช่องทางการชำระเงิน'}, status=400)
             messages.error(request, "กรุณาเลือกที่อยู่จัดส่งและช่องทางการชำระเงิน")
             return render(request, 'cart.html', {
                 'cart_items': cart_items,
@@ -402,68 +507,106 @@ def checkout(request):
             })
 
         if is_ajax and checkout_action == 'validate' and payment_method == 'promptpay':
-            qr_code_url = 'https://via.placeholder.com/200'
-            return JsonResponse({
-                'success': True,
-                'total_with_shipping': float(total_with_shipping),
-                'qr_code_url': qr_code_url
-            })
+            try:
+                # ใช้หมายเลขโทรศัพท์ของแพลตฟอร์มจาก settings
+                mobile = settings.PROMPTPAY_MOBILE
+                if not mobile:
+                    logger.error("PROMPTPAY_MOBILE not configured in settings")
+                    return JsonResponse({'success': False, 'message': 'ไม่สามารถสร้าง QR Code ได้ เนื่องจากไม่มีหมายเลขโทรศัพท์'}, status=400)
+                
+                # สร้าง QR Code
+                payload = generate_promptpay_qr_payload(mobile=mobile, amount=total_with_shipping, one_time=True)
+                qr_image = generate_qr_image(payload)
+                qr_base64 = base64.b64encode(qr_image).decode('utf-8')
+                qr_code_url = f"data:image/png;base64,{qr_base64}"
+                
+                logger.info(f"Generated QR code for amount={total_with_shipping}")
+                return JsonResponse({
+                    'success': True,
+                    'total_with_shipping': float(total_with_shipping),
+                    'qr_code_url': qr_code_url,
+                    'message': 'QR Code พร้อมใช้งาน'
+                })
+            except InvalidInputError as e:
+                logger.error(f"QR Code generation failed: {str(e)}")
+                return JsonResponse({'success': False, 'message': str(e)}, status=400)
+            except Exception as e:
+                logger.error(f"Unexpected error in QR Code generation: {str(e)}")
+                return JsonResponse({'success': False, 'message': 'เกิดข้อผิดพลาดในการสร้าง QR Code'}, status=500)
 
         if is_ajax and checkout_action == 'confirm' and payment_method == 'promptpay':
-            order = Order.objects.create(
-                id=uuid4(),
-                buyer=request.user,
-                delivery_address=delivery_address,
-                total_price=total_price,
-                shipping_fee=shipping_fee,
-                total_with_shipping=total_with_shipping,
-                payment_method=payment_method,
-                status='confirmed',
-                estimated_time=timezone.now() + timedelta(minutes=25)
-            )
-
-            for item in cart_items:
-                OrderItem.objects.create(
-                    order=order,
-                    store=item.store,
-                    quantity=item.quantity,
-                    price=item.store.price,
-                    note=item.note,
+            try:
+                order = Order.objects.create(
+                    id=uuid4(),
+                    buyer=request.user,
+                    delivery_address=delivery_address,
+                    total_price=total_price,
+                    shipping_fee=shipping_fee,
+                    total_with_shipping=total_with_shipping,
+                    payment_method=payment_method,
+                    status='confirmed',
+                    estimated_time=timezone.now() + timedelta(minutes=25)
                 )
 
-            cart_items.delete()
-            return JsonResponse({
-                'success': True,
-                'message': f'สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}',
-                'redirect_url': reverse('checkout_success', kwargs={'order_id': str(order.id)})
-            })
+                for item in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        store=item.store,
+                        quantity=item.quantity,
+                        price=item.store.price,
+                        note=item.note,
+                    )
+
+                cart_items.delete()
+                logger.info(f"Order confirmed: id={order.id}, user={request.user}, method={payment_method}")
+                return JsonResponse({
+                    'success': True,
+                    'message': f'สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}',
+                    'redirect_url': reverse('checkout_success', kwargs={'order_id': str(order.id)})
+                })
+            except Exception as e:
+                logger.error(f"Order confirmation failed: {str(e)}")
+                return JsonResponse({'success': False, 'message': 'ไม่สามารถยืนยันคำสั่งซื้อได้'}, status=500)
 
         if payment_method != 'promptpay':
-            order = Order.objects.create(
-                id=uuid4(),
-                buyer=request.user,
-                delivery_address=delivery_address,
-                total_price=total_price,
-                shipping_fee=shipping_fee,
-                total_with_shipping=total_with_shipping,
-                payment_method=payment_method,
-                status='confirmed' if payment_method == 'cash_on_delivery' else 'pending',
-                estimated_time=timezone.now() + timedelta(minutes=25)
-            )
-
-            for item in cart_items:
-                OrderItem.objects.create(
-                    order=order,
-                    store=item.store,
-                    quantity=item.quantity,
-                    price=item.store.price,
-                    note=item.note,
+            try:
+                order = Order.objects.create(
+                    id=uuid4(),
+                    buyer=request.user,
+                    delivery_address=delivery_address,
+                    total_price=total_price,
+                    shipping_fee=shipping_fee,
+                    total_with_shipping=total_with_shipping,
+                    payment_method=payment_method,
+                    status='confirmed' if payment_method == 'cash_on_delivery' else 'pending',
+                    estimated_time=timezone.now() + timedelta(minutes=25)
                 )
 
-            cart_items.delete()
-            messages.success(request, f"สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}")
-            context = {'order': order, 'cart_count': 0}
-            return render(request, 'checkout_success.html', context)
+                for item in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        store=item.store,
+                        quantity=item.quantity,
+                        price=item.store.price,
+                        note=item.note,
+                    )
+
+                cart_items.delete()
+                logger.info(f"Order created: id={order.id}, user={request.user}, method={payment_method}")
+                messages.success(request, f"สั่งซื้อสำเร็จ! หมายเลขคำสั่งซื้อ: {order.id}")
+                context = {'order': order, 'cart_count': 0}
+                return render(request, 'checkout_success.html', context)
+            except Exception as e:
+                logger.error(f"Order creation failed: {str(e)}")
+                messages.error(request, "ไม่สามารถดำเนินการสั่งซื้อได้")
+                return render(request, 'cart.html', {
+                    'cart_items': cart_items,
+                    'total_price': total_price,
+                    'shipping_fee': shipping_fee,
+                    'total_with_shipping': total_with_shipping,
+                    'addresses': addresses,
+                    'cart_count': cart_count,
+                })
 
         return redirect('checkout_success', order_id=order.id)
 

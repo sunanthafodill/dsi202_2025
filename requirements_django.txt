@@ -13,3 +13,5 @@ django-allauth
 PyJWT
 cryptography
 python-dotenv
+libscrc
+qrcode
