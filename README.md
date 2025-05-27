@@ -108,10 +108,11 @@ pip install -r requirements.txt
 | **libscrc**        | ใช้คำนวณค่า CRC สำหรับ QR PromptPay |
 | **qrcode**         | สำหรับสร้าง QR Code เพื่อใช้ในการรับชำระเงิน |
 
-ไลบรารีเหล่านี้จะถูกติดตั้งเมื่อรันคำสั่ง:
+*ไลบรารีเหล่านี้จะถูกติดตั้งเมื่อรันคำสั่ง*:
 
 ```bash
 pip install -r requirements.txt
+```
 
 3.	ตั้งค่าตัวแปรแวดล้อม (Environment Variables)
 สร้างไฟล์ .env และใส่ค่าดังนี้
@@ -221,10 +222,10 @@ volumes:
 | **libscrc**        | ใช้คำนวณค่า CRC สำหรับ QR PromptPay |
 | **qrcode**         | สำหรับสร้าง QR Code เพื่อใช้ในการรับชำระเงิน |
 
-> ไลบรารีเหล่านี้จะถูกติดตั้งอัตโนมัติเมื่อใช้คำสั่ง:
-> ```bash
-> pip install -r requirements.txt
-> ```
+*ไลบรารีเหล่านี้จะถูกติดตั้งอัตโนมัติเมื่อใช้คำสั่ง*:
+```bash
+pip install -r requirements.txt
+```
 
 3.  สร้าง .env สำหรับค่าต่าง ๆ
 ```ini
