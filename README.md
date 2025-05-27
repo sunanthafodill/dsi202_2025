@@ -96,11 +96,30 @@ pip install -r requirements.txt
 ```
 *หมายเหตุ: หากไม่มี requirements.txt ให้ใช้คำสั่ง pip freeze > requirements.txt เพื่อบันทึกแพ็กเกจที่ใช้*
 
+โปรเจกต์นี้ใช้ไลบรารีเพิ่มเติมจาก Django เพื่อรองรับฟีเจอร์ต่าง ๆ ดังนี้:
+
+| ไลบรารี           | คำอธิบาย |
+|-------------------|----------|
+| **Pillow**         | จัดการไฟล์รูปภาพ เช่น การอัปโหลดเมนูอาหาร |
+| **django-allauth** | ใช้สำหรับการเข้าสู่ระบบผ่านบัญชี Google |
+| **PyJWT**          | สำหรับสร้างและตรวจสอบ JSON Web Token |
+| **cryptography**   | ใช้เข้ารหัสและถอดรหัสข้อมูล |
+| **python-dotenv**  | โหลดตัวแปรแวดล้อมจากไฟล์ `.env` |
+| **libscrc**        | ใช้คำนวณค่า CRC สำหรับ QR PromptPay |
+| **qrcode**         | สำหรับสร้าง QR Code เพื่อใช้ในการรับชำระเงิน |
+
+ไลบรารีเหล่านี้จะถูกติดตั้งเมื่อรันคำสั่ง:
+
+```bash
+pip install -r requirements.txt
+
 3.	ตั้งค่าตัวแปรแวดล้อม (Environment Variables)
 สร้างไฟล์ .env และใส่ค่าดังนี้
 ```ini
 GOOGLE_CLIENT_ID=ใส่ค่าจาก Google API Console
 GOOGLE_CLIENT_SECRET=ใส่ secret ของแอปคุณ
+
+PROMPTPAY_MOBILE=ใส่เบอร์มือถือของคุณสำหรับการรับชำระผ่าน PromptPay
 ```
 
 4.	ดำเนินการ Migrate ฐานข้อมูล
@@ -190,13 +209,32 @@ volumes:
   db_data:
 ```
 
+โปรเจกต์นี้ใช้ไลบรารีเพิ่มเติมจาก Django เพื่อรองรับฟีเจอร์ต่าง ๆ ดังนี้:
+
+| ไลบรารี           | คำอธิบาย |
+|-------------------|----------|
+| **Pillow**         | จัดการไฟล์รูปภาพ เช่น การอัปโหลดเมนูอาหาร |
+| **django-allauth** | ใช้สำหรับการเข้าสู่ระบบผ่านบัญชี Google |
+| **PyJWT**          | สำหรับสร้างและตรวจสอบ JSON Web Token |
+| **cryptography**   | ใช้เข้ารหัสและถอดรหัสข้อมูล |
+| **python-dotenv**  | โหลดตัวแปรแวดล้อมจากไฟล์ `.env` |
+| **libscrc**        | ใช้คำนวณค่า CRC สำหรับ QR PromptPay |
+| **qrcode**         | สำหรับสร้าง QR Code เพื่อใช้ในการรับชำระเงิน |
+
+> ไลบรารีเหล่านี้จะถูกติดตั้งอัตโนมัติเมื่อใช้คำสั่ง:
+> ```bash
+> pip install -r requirements.txt
+> ```
+
 3.  สร้าง .env สำหรับค่าต่าง ๆ
 ```ini
 DEBUG=True
 SECRET_KEY=django-secret-key-here
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-secret
+PROMPTPAY_MOBILE=เบอร์มือถือที่ใช้รับชำระผ่าน PromptPay
 ```
+*หมายเหตุ: ควรเก็บไฟล์ .env ไว้ใน .gitignore เพื่อป้องกันการ push ข้อมูลสำคัญขึ้น GitHub*
 
 4.	Build และรันโปรเจกต์ด้วย Docker Compose
 ```bash
