@@ -263,7 +263,7 @@ docker-compose exec web python myproject/manage.py migrate
 docker-compose exec web python myproject/manage.py createsuperuser
 ```
 
-### การเพิ่มคำอธิบาย Jupyter
+### คำอธิบาย Jupyter
 ```markdown
 การใช้งาน Jupyter
 - Jupyter Notebook มีไว้สำหรับการวิเคราะห์ข้อมูลหรือทดสอบโค้ดในโปรเจกต์
