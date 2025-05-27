@@ -1,53 +1,255 @@
 {% extends 'base.html' %}
-{% load static %}
-{% load socialaccount %}
+{% load static socialaccount %}
+
+{% block extra_head %}
+<meta name="description" content="เข้าสู่ระบบ IMSUK เพื่อสั่งอาหารคุณภาพ ลดขยะอาหาร และสนับสนุนร้านค้าท้องถิ่น">
+<meta name="keywords" content="IMSUK, เข้าสู่ระบบ, ลดขยะอาหาร, สั่งอาหาร">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Kanit:wght@400;500&display=swap" rel="stylesheet">
+<link href="{% static 'css/animate.min.css' %}" rel="stylesheet">
+<style>
+:root {
+    --imsuk-primary: #4CAF50; /* เขียว */
+    --imsuk-secondary: #FF69B4; /* ชมพู */
+    --imsuk-bg: #F7EFDB; /* ครีมอ่อน */
+    --imsuk-accent: #A9D18E; /* เขียวอ่อน */
+    --imsuk-dark: #333333; /* เทาเข้ม */
+    --imsuk-light: #FFFFFF; /* ขาว */
+}
+
+body {
+    background: linear-gradient(135deg, var(--imsuk-bg) 0%, #E8F5E9 100%);
+    font-family: 'Kanit', 'Poppins', sans-serif;
+    overflow-x: hidden;
+}
+
+.login-container {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('{% static "images/leaf-pattern.png" %}') repeat;
+    opacity: 0.05;
+    z-index: 0;
+}
+
+.card-login {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    padding: 2.5rem;
+    max-width: 450px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s ease;
+}
+
+.card-login:hover {
+    transform: translateY(-5px);
+}
+
+.imsuk-logo-form {
+    width: 120px;
+    transition: transform 0.3s ease;
+    animation: logoPulse 2s infinite;
+}
+
+.imsuk-logo-form:hover {
+    transform: scale(1.05);
+}
+
+@keyframes logoPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+
+h1 {
+    font-family: 'Kanit', sans-serif;
+    font-weight: 500;
+    color: var(--imsuk-dark);
+    font-size: 2rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mission-text {
+    color: var(--imsuk-dark);
+    font-size: 1rem;
+    opacity: 0.8;
+    margin-bottom: 2rem;
+}
+
+.form-label {
+    color: var(--imsuk-dark);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.form-control {
+    border: 2px solid var(--imsuk-accent);
+    border-radius: 10px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--imsuk-primary);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    outline: none;
+}
+
+.btn-imsuk {
+    background: linear-gradient(90deg, var(--imsuk-primary), var(--imsuk-accent));
+    color: var(--imsuk-light);
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-imsuk:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.btn-outline-imsuk {
+    border: 2px solid var(--imsuk-secondary);
+    color: var(--imsuk-secondary);
+    border-radius: 12px;
+    padding: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-outline-imsuk:hover {
+    background-color: var(--imsuk-secondary);
+    color: var(--imsuk-light);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: #dc3545;
+    color: #dc3545;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.5rem 0;
+    color: var(--imsuk-dark);
+    font-size: 0.9rem;
+    opacity: 0.6;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--imsuk-accent);
+}
+
+.divider span {
+    padding: 0 1rem;
+}
+
+.signup-link {
+    color: var(--imsuk-primary);
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.signup-link:hover {
+    color: var(--imsuk-secondary);
+}
+
+@media (max-width: 576px) {
+    .card-login {
+        padding: 1.5rem;
+        border-radius: 15px;
+    }
+    h1 {
+        font-size: 1.75rem;
+    }
+    .imsuk-logo-form {
+        width: 100px;
+    }
+    .btn-imsuk, .btn-outline-imsuk {
+        font-size: 1rem;
+        padding: 0.65rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block title %}<strong>IMSUK</strong> - เข้าสู่ระบบ{% endblock %}
+
 {% block content %}
-<div class="container my-5 animate__animated animate__fadeIn">
-    <div class="text-center mb-4">
-        <img src="{% static 'images/imsuk_logoja.png' %}" alt="IMSUK Logo" class="imsuk-logo-form">
-    </div>
-    <h1 class="text-center mb-4" style="color: var(--imsuk-primary);">เข้าสู่ระบบ</h1>
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card p-4 shadow-sm animate__animated animate__fadeInUp">
-                <form method="post" action="{% url 'account_login' %}">
-                    {% csrf_token %}
-                    {% if form.errors %}
-                    <div class="alert alert-danger animate__animated animate__shakeX">
-                        <ul class="mb-0">
-                            {% for error in form.non_field_errors %}
-                            <li>{{ error }}</li>
-                            {% endfor %}
-                            {% for field in form %}
-                            {% for error in field.errors %}
-                            <li>{{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                    <div class="mb-3">
-                        <label for="id_login" class="form-label">ชื่อผู้ใช้หรืออีเมล</label>
-                        <input type="text" name="login" id="id_login" class="form-control" required placeholder="กรอกชื่อผู้ใช้หรืออีเมล">
-                    </div>
-                    <div class="mb-3">
-                        <label for="id_password" class="form-label">รหัสผ่าน</label>
-                        <input type="password" name="password" id="id_password" class="form-control" required placeholder="กรอกรหัสผ่าน">
-                    </div>
-                    <input type="hidden" name="next" value="{{ next|default:'home' }}">
-                    <button type="submit" class="btn btn-imsuk w-100">เข้าสู่ระบบ</button>
-                </form>
-                <hr>
-                <p class="text-center">หรือเข้าสู่ระบบด้วย</p>
-                <a href="{% provider_login_url 'google' %}" class="btn btn-outline-imsuk w-100">
-                    <i class="fab fa-google me-2"></i> ล็อกอินด้วย Google
-                </a>
-                <p class="text-center mt-3">
-                    ยังไม่มีบัญชี? <a href="{% url 'account_signup' %}">สมัครสมาชิก</a>
-                </p>
-            </div>
+<div class="login-container animate__animated animate__fadeIn">
+    <div class="card-login animate__animated animate__fadeInUp">
+        <div class="text-center mb-4">
+            <img src="{% static 'images/imsuk_logoja.png' %}" alt="IMSUK Logo" class="imsuk-logo-form">
         </div>
+        <h1 class="text-center mb-3">เข้าสู่ระบบ</h1>
+        <p class="mission-text text-center">เข้าร่วม IMSUK เพื่อสั่งอาหารคุณภาพและช่วยลดขยะอาหาร 🌱</p>
+        
+        <form method="post" action="{% url 'account_login' %}">
+            {% csrf_token %}
+            {% if form.errors %}
+            <div class="alert alert-danger animate__animated animate__shakeX">
+                <ul class="mb-0">
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for field in form %}
+                    {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label for="id_login" class="form-label">ชื่อผู้ใช้หรืออีเมล</label>
+                <input type="text" name="login" id="id_login" class="form-control" required placeholder="กรอกชื่อผู้ใช้หรืออีเมล" aria-label="ชื่อผู้ใช้หรืออีเมล">
+            </div>
+            <div class="mb-4">
+                <label for="id_password" class="form-label">รหัสผ่าน</label>
+                <input type="password" name="password" id="id_password" class="form-control" required placeholder="กรอกรหัสผ่าน" aria-label="รหัสผ่าน">
+            </div>
+            <input type="hidden" name="next" value="{{ next|default:'home' }}">
+            <button type="submit" class="btn btn-imsuk w-100">เข้าสู่ระบบ</button>
+        </form>
+
+        <div class="divider"><span>หรือ</span></div>
+
+        <a href="{% provider_login_url 'google' %}" class="btn btn-outline-imsuk w-100">
+            <i class="fab fa-google me-2"></i> ล็อกอินด้วย Google
+        </a>
+
+        <p class="text-center mt-3">
+            ยังไม่มีบัญชี? <a href="{% url 'account_signup' %}" class="signup-link">สมัครสมาชิก</a>
+        </p>
     </div>
 </div>
 {% endblock %}

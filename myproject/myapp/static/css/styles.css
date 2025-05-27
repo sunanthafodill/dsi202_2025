@@ -81,6 +81,13 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 
+.imsuk-logo-home {
+    max-width: 157px !important;
+    height: auto !important;
+    display: block;
+    margin: 0 auto;
+}
+
 /* Mission Statement */
 .mission-statement {
     text-align: center;

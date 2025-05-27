@@ -202,7 +202,7 @@
     <!-- Mission Statement -->
     <div class="mission-statement mb-4 text-center">
         <h2 class="text-success">ร้านค้า</h2>
-        <p class="text-muted">เลือกซื้ออาหารจากร้านค้าที่ช่วยลดขยะอาหารและดูแลโลกกับ <span class="imsuk-bold">IMSUK</span></p>
+        <p class="text-muted">เลือกซื้ออาหารจากร้านค้าที่ช่วยลดขยะอาหารและดูแลโลกกับ <span style="font-weight: 500; background: linear-gradient(90deg, #4CAF50, #FF69B4); -webkit-background-clip: text; background-clip: text; color: transparent;">IMSUK</span></p>
     </div>
 
     <!-- Search Form -->
@@ -241,7 +241,12 @@
                 <div class="col-6 col-md-4">
                     <div class="store-card card shadow-sm">
                         <a href="{% url 'store_detail' store.id %}">
-                            <img src="{{ store.store_image.url|default:'https://via.placeholder.com/300' }}" class="card-img-top" alt="{{ store.name }}">
+                            {% if store.store_image %}
+                            <img src="{{ store.store_image.url }}" class="card-img-top" alt="{{ store.name }}" onerror="console.log('Image failed for store {{ store.id }}: {{ store.store_image.url }}')">
+                            {% else %}
+                            <img src="https://via.placeholder.com/300?text={{ store.name|urlencode }}" class="card-img-top" alt="{{ store.name }}">
+                            <!-- Debug: No image for store {{ store.id }} -->
+                            {% endif %}
                         </a>
                         <div class="card-body">
                             <a href="{% url 'store_detail' store.id %}" class="text-decoration-none">
@@ -497,7 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Debug
             console.log('Binding form for store:', storeId, 'name:', storeName);
 
             // Remove existing listeners
@@ -517,9 +521,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Check if cart is empty
+                // Check if cart is empty or from same store
                 const cartIsEmpty = await isCartEmpty();
-                console.log('Cart empty:', cartIsEmpty);
+                console.log('Cart empty:', cartIsEmpty, 'Current store:', currentCartStoreId, 'New store:', storeId);
                 if (!cartIsEmpty && currentCartStoreId && currentCartStoreId !== storeId) {
                     if (toast) {
                         toastEl.querySelector('.toast-body').textContent = 'คุณต้องล้างตะกร้าก่อนเพิ่มสินค้าจากร้านใหม่';
@@ -530,14 +534,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                cartControls.setAttribute('data-added', 'true');
                 const quantityHidden = form.querySelector('.quantity-hidden');
+                if (!quantityHidden) {
+                    console.error('quantityHidden not found in form for store:', storeId);
+                    if (toast) {
+                        toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                        toastEl.classList.remove('bg-success', 'bg-warning');
+                        toastEl.classList.add('bg-danger');
+                        toast.show();
+                    }
+                    return;
+                }
+
                 const maxQuantity = parseInt(quantityHidden.getAttribute('data-max')) || 9999;
                 console.log('Max quantity:', maxQuantity);
+                cartControls.setAttribute('data-added', 'true');
                 cartControls.innerHTML = `
+                    <input type="hidden" name="quantity" value="${quantityHidden.value}" class="quantity-hidden" data-max="${maxQuantity}">
                     <div class="quantity-controls">
                         <button type="button" class="btn btn-outline-secondary decrease-quantity" aria-label="ลดจำนวน">-</button>
-                        <input type="number" name="quantity" value="${quantityHidden.value}" min="0" max="${maxQuantity}" class="form-control quantity-input">
+                        <input type="number" name="quantity_display" value="${quantityHidden.value}" min="0" max="${maxQuantity}" class="form-control quantity-input">
                         <button type="button" class="btn btn-success increase-quantity" aria-label="เพิ่มจำนวน">+</button>
                     </div>
                     <button type="submit" class="btn btn-success confirm-btn">ยืนยัน</button>
@@ -548,6 +564,17 @@ document.addEventListener('DOMContentLoaded', () => {
             form.addEventListener('submit', e => {
                 e.preventDefault();
                 const confirmBtn = cartControls.querySelector('.confirm-btn');
+                const quantityHidden = form.querySelector('.quantity-hidden');
+                if (!quantityHidden) {
+                    console.error('quantityHidden not found during submit for store:', storeId);
+                    if (toast) {
+                        toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                        toastEl.classList.remove('bg-success', 'bg-warning');
+                        toastEl.classList.add('bg-danger');
+                        toast.show();
+                    }
+                    return;
+                }
                 console.log('Submitting cart for store:', storeId);
                 confirmBtn.disabled = true;
                 confirmBtn.textContent = 'กำลังดำเนินการ...';
@@ -594,13 +621,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             cartControls.setAttribute('data-added', 'false');
                             quantityHidden.value = '1';
                             cartControls.innerHTML = `
+                                <input type="hidden" name="quantity" value="1" class="quantity-hidden" data-max="${data.quantityAvailable}">
                                 <button type="button" class="btn btn-success add-to-cart-btn" aria-label="Add to cart for ${storeName}">
                                     <i class="fas fa-cart-plus me-2"></i>เพิ่ม
                                 </button>
                             `;
                             bindCartForms();
                         }
-                        // Update currentCartStoreId
                         currentCartStoreId = data.cartQuantity > 0 ? storeId : '';
                     }
                 })
@@ -623,6 +650,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const quantityInput = cartControls.querySelector('.quantity-input');
                 const quantityHidden = form.querySelector('.quantity-hidden');
                 const confirmBtn = cartControls.querySelector('.confirm-btn');
+
+                if (!quantityInput || !quantityHidden || !confirmBtn) {
+                    console.error('Missing controls in bindQuantityControls for store:', storeId);
+                    return;
+                }
 
                 function updateConfirm() {
                     const qty = parseInt(quantityInput.value) || 0;
