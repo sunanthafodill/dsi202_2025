@@ -81,6 +81,7 @@ Youtube : https://youtu.be/uAE1KEzBcJ4?si=Es0FN_65nIddfTes
 ## **การติดตั้งแบบปกติ** 
 ผู้พัฒนาหรือผู้สนใจสามารถติดตั้งระบบ IMSUK (อิ่มสุข) ได้บนเครื่องคอมพิวเตอร์ที่ติดตั้ง Python และ Virtual Environment แล้ว โดยมีขั้นตอนดังนี้
 1. Clone project หรือดาวน์โหลด code จาก github
+คัดลอก URL ของโปรเจกต์จากหน้า GitHub ของ IMSUK (https://github.com/sunanthafodill/dsi202_2025.git)
 ```bash
 git clone <ลิงก์ GitHub Repository ของโปรเจกต์>
 cd week05_imsuk/myproject
@@ -108,7 +109,7 @@ pip install -r requirements.txt
 | **libscrc**        | ใช้คำนวณค่า CRC สำหรับ QR PromptPay |
 | **qrcode**         | สำหรับสร้าง QR Code เพื่อใช้ในการรับชำระเงิน |
 
-*ไลบรารีเหล่านี้จะถูกติดตั้งเมื่อรันคำสั่ง*:
+ไลบรารีเหล่านี้จะถูกติดตั้งเมื่อรันคำสั่ง:
 
 ```bash
 pip install -r requirements.txt
@@ -122,6 +123,7 @@ GOOGLE_CLIENT_SECRET=ใส่ secret ของแอปคุณ
 
 PROMPTPAY_MOBILE=ใส่เบอร์มือถือของคุณสำหรับการรับชำระผ่าน PromptPay
 ```
+*หมายเหตุ: ควรเก็บไฟล์ .env ไว้ใน .gitignore เพื่อป้องกันการ push ข้อมูลสำคัญขึ้น GitHub*
 
 4.	ดำเนินการ Migrate ฐานข้อมูล
 ```bash
@@ -222,7 +224,7 @@ volumes:
 | **libscrc**        | ใช้คำนวณค่า CRC สำหรับ QR PromptPay |
 | **qrcode**         | สำหรับสร้าง QR Code เพื่อใช้ในการรับชำระเงิน |
 
-*ไลบรารีเหล่านี้จะถูกติดตั้งอัตโนมัติเมื่อใช้คำสั่ง*:
+ไลบรารีเหล่านี้จะถูกติดตั้งอัตโนมัติเมื่อใช้คำสั่ง:
 ```bash
 pip install -r requirements.txt
 ```
@@ -244,6 +246,8 @@ docker-compose up
 ```
 ระบบจะพร้อมใช้งานที่ http://localhost:8000/
 
+*หมายเหตุ: หากต้องการหยุดการทำงาน ใช้คำสั่ง docker-compose down*
+
 5.	กรณี migrate หรือ createsuperuser
 เข้าใช้ Bash ใน container
 ```bash
@@ -258,6 +262,13 @@ docker-compose exec web python myproject/manage.py makemigrations
 docker-compose exec web python myproject/manage.py migrate  
 docker-compose exec web python myproject/manage.py createsuperuser
 ```
+
+### การเพิ่มคำอธิบาย Jupyter
+```markdown
+#### การใช้งาน Jupyter
+- Jupyter Notebook มีไว้สำหรับการวิเคราะห์ข้อมูลหรือทดสอบโค้ดในโปรเจกต์
+- เข้าใช้งานได้ที่ `http://localhost:8888` หลังจากรัน `docker-compose up`
+- Token สำหรับเข้าใช้งานจะปรากฏใน log ของ container Jupyter
 
 
 ## **การใช้งาน**
