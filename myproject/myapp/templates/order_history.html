@@ -2,137 +2,9 @@
 {% load static %}
 
 {% block title %}<strong class="imsuk-bold">IMSUK</strong> - ประวัติคำสั่งซื้อ{% endblock %}
-
-{% block content %}
-<div class="container my-5">
-    <!-- Toast Container -->
-    <div class="toast-container position-fixed top-0 end-0 p-3">
-        <div id="orderToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body"></div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    </div>
-
-    <h1 class="text-center mb-5 text-success animate__animated animate__fadeIn">ประวัติคำสั่งซื้อ</h1>
-
-    {% if orders %}
-    <div class="accordion" id="orderAccordion">
-        {% for order in orders %}
-        <div class="accordion-item mb-4 animate__animated animate__fadeInUp {% if order.status == 'completed' %}completed-accordion{% else %}non-completed-accordion{% endif %}" 
-             style="animation-delay: {{ forloop.counter0|floatformat:1 }}s;" 
-             data-order-id="{{ order.id|stringformat:'s' }}" 
-             data-estimated-time="{{ order.estimated_time|date:'c' }}">
-            <h2 class="accordion-header" id="heading{{ order.id }}">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ order.id }}" aria-expanded="false" aria-controls="collapse{{ order.id }}">
-                    <div class="d-flex justify-content-between align-items-center w-100">
-                        <span class="fw-bold">
-                            หมายเลขคำสั่งซื้อ: {{ order.id }}
-                            {% if order.status != 'completed' %}
-                            - <span class="status-box status-{{ order.status }}">{{ order.get_status_display }}</span>
-                            {% endif %}
-                        </span>
-                        <span class="text-muted">{{ order.order_time|date:"d/m/Y H:i" }}</span>
-                    </div>
-                </button>
-            </h2>
-            <div id="collapse{{ order.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ order.id }}" data-bs-parent="#orderAccordion">
-                <div class="accordion-body">
-                    <div class="order-details mb-4">
-                        <p class="mb-2"><strong>สถานะ:</strong> 
-                            <span class="badge status-{{ order.status }}" 
-                                  style="{% if order.status == 'completed' %}opacity: 1;{% else %}opacity: 0.9;{% endif %}">
-                                {{ order.get_status_display }}
-                            </span>
-                        </p>
-                        <p class="mb-2"><strong>เวลาที่คาดว่าจะได้รับ:</strong> {{ order.estimated_time|date:"d/m/Y H:i" }}</p>
-                        <p class="mb-2"><strong>ช่องทางชำระเงิน:</strong> {{ order.get_payment_method_display }}</p>
-                        <p class="mb-2"><strong>ที่อยู่จัดส่ง:</strong> 
-                            {% if order.delivery_address %}
-                                {{ order.delivery_address.label }} - {{ order.delivery_address.subdistrict }}, 
-                                {{ order.delivery_address.district }}, {{ order.delivery_address.province }} 
-                                {{ order.delivery_address.postal_code }}
-                            {% else %}
-                                ไม่มีข้อมูลที่อยู่
-                            {% endif %}
-                        </p>
-                    </div>
-
-                    <h6 class="mt-4 mb-3 fw-bold">รายการสั่งซื้อ</h6>
-                    <div class="row g-3">
-                        {% for item in order.items.all %}
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm store-card">
-                                <div class="card-body">
-                                    <p class="fw-bold mb-2">{{ item.store.name }}</p>
-                                    <p class="mb-1">จำนวน: {{ item.quantity }}</p>
-                                    <p class="mb-1">ราคา: {{ item.price|floatformat:0 }} บาท</p>
-                                    <p class="mb-1">รวม: {{ item.total_price|floatformat:0 }} บาท</p>
-                                    {% if item.note %}
-                                    <p class="mb-0 text-muted">โน้ต: {{ item.note }}</p>
-                                    {% endif %}
-                                    {% if order.status == 'completed' %}
-                                    {% if item.has_reviewed %}
-                                    <p class="mt-3 mb-0 text-success">รีวิวแล้ว: {{ item.review_rating }}/5 ดาว</p>
-                                    {% else %}
-                                    <button class="btn btn-imsuk btn-sm mt-3 review-btn" data-bs-toggle="modal" data-bs-target="#reviewModal{{ item.id }}" aria-label="รีวิวร้านค้า">รีวิวร้านค้า</button>
-                                    {% endif %}
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% if order.status == 'completed' and not item.has_reviewed %}
-                        <div class="modal fade" id="reviewModal{{ item.id }}" tabindex="-1" aria-labelledby="reviewModalLabel{{ item.id }}" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="reviewModalLabel{{ item.id }}">รีวิวร้านค้า: {{ item.store.name }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <p class="mb-3">ให้คะแนนร้านค้า:</p>
-                                        <div class="star-rating" data-store-id="{{ item.store.id }}">
-                                            {% for i in "54321" %} <!-- Reversed for correct star order -->
-                                            <input type="radio" name="rating{{ item.id }}" id="star{{ item.id }}-{{ i }}" value="{{ i }}" class="star-radio">
-                                            <label for="star{{ item.id }}-{{ i }}" class="star">★</label>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                                        <button type="button" class="btn btn-imsuk submit-review" data-store-id="{{ item.store.id }}">ส่งรีวิว</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% endfor %}
-                    </div>
-
-                    <div class="order-summary mt-4">
-                        <p class="mb-2"><strong>ค่าสินค้า:</strong> {{ order.total_price|floatformat:0 }} บาท</p>
-                        <p class="mb-2"><strong>ค่าส่ง:</strong> {{ order.shipping_fee|floatformat:0 }} บาท</p>
-                        <p class="mb-2 fw-bold"><strong>ยอดรวม:</strong> {{ order.total_with_shipping|floatformat:0 }} บาท</p>
-                    </div>
-
-                    <div class="text-end mt-4">
-                        <button class="btn btn-outline-danger btn-sm delete-order" data-order-id="{{ order.id|stringformat:'s' }}" aria-label="ลบคำสั่งซื้อ">ลบคำสั่งซื้อ</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="text-center py-5 animate__animated animate__fadeIn">
-        <i class="fas fa-history fa-3x text-muted mb-3"></i>
-        <p class="text-muted">คุณยังไม่มีคำสั่งซื้อ</p>
-        <a href="{% url 'store_list' %}" class="btn btn-imsuk">ไปที่ร้านค้า</a>
-    </div>
-    {% endif %}
-</div>
-
+{% block meta_description %}ดูประวัติคำสั่งซื้อของคุณกับ IMSUK เพื่อติดตามสถานะและรีวิวร้านค้า{% endblock %}
+{% block meta_keywords %}IMSUK, ประวัติคำสั่งซื้อ, ลดขยะอาหาร, รีวิวร้านค้า{% endblock %}
+{% block extra_head %}
 <style>
 /* Modern and clean design */
 body {
@@ -158,16 +30,16 @@ h1 {
 }
 
 .completed-accordion {
-    background-color: #1A202C !important; /* Dark slate for completed */
-    color: #000000 !important; /* Black text */
+    background-color: #1A202C !important;
+    color: #000000 !important;
 }
 
 .completed-accordion .accordion-button .text-muted {
-    color: #FFFFFF !important; /* White text for time in completed status */
+    color: #FFFFFF !important;
 }
 
 .non-completed-accordion {
-    background-color: #E8F5E9 !important; /* Light green for non-completed */
+    background-color: #E8F5E9 !important;
 }
 
 .accordion-button {
@@ -194,8 +66,8 @@ h1 {
     border-radius: 6px;
     font-size: 0.875rem;
     font-weight: 500;
-    background-color: #FF69B4 !important; /* Pink for all non-completed statuses */
-    color: #FFFFFF !important; /* White text for contrast */
+    background-color: #FF69B4 !important;
+    color: #FFFFFF !important;
 }
 
 .status-completed {
@@ -210,22 +82,7 @@ h1 {
     border-radius: 6px;
 }
 
-.status-pending {
-    background-color: #FF69B4 !important;
-    color: #FFFFFF !important;
-}
-
-.status-processing {
-    background-color: #FF69B4 !important;
-    color: #FFFFFF !important;
-}
-
-.status-shipped {
-    background-color: #FF69B4 !important;
-    color: #FFFFFF !important;
-}
-
-.status-confirmed {
+.status-pending, .status-confirmed, .status-out_for_delivery {
     background-color: #FF69B4 !important;
     color: #FFFFFF !important;
 }
@@ -291,7 +148,7 @@ h1 {
     display: flex;
     justify-content: center;
     gap: 8px;
-    direction: ltr; /* Left-to-right for intuitive star selection */
+    direction: ltr;
 }
 
 .star-radio {
@@ -303,14 +160,13 @@ h1 {
     color: #E2E8F0;
     cursor: pointer;
     transition: color 0.2s ease;
-    pointer-events: auto;
 }
 
 .star-radio:checked + .star,
 .star-radio:checked ~ .star,
 .star-rating .star:hover,
 .star-rating .star:hover ~ .star {
-    color: #FBBF24 !important; /* Amber for stars */
+    color: #FBBF24 !important;
 }
 
 .modal-content {
@@ -335,10 +191,160 @@ h1 {
 .modal {
     z-index: 1050;
 }
+
+.bg-imsuk {
+    background-color: #48BB78;
+}
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="orderToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <h1 class="text-center mb-5 text-success animate__animated animate__fadeIn">ประวัติคำสั่งซื้อ</h1>
+
+    {% if orders %}
+    <div class="accordion" id="orderAccordion">
+        {% for order in orders %}
+        <div class="accordion-item mb-4 animate__animated animate__fadeInUp {% if order.status == 'completed' %}completed-accordion{% else %}non-completed-accordion{% endif %}" 
+             style="animation-delay: {{ forloop.counter0|floatformat:1 }}s;" 
+             data-order-id="{{ order.id|stringformat:'s' }}" 
+             data-estimated-time="{% if order.status != 'completed' %}{{ order.order_time|date:'c' }}{% endif %}">
+            <h2 class="accordion-header" id="heading{{ order.id }}">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ order.id }}" aria-expanded="false" aria-controls="collapse{{ order.id }}">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <span class="fw-bold">
+                            หมายเลขคำสั่งซื้อ: {{ order.id|truncatechars:8 }}
+                            {% if order.status != 'completed' %}
+                            - <span class="status-box status-{{ order.status }}">{{ order.get_status_display }}</span>
+                            {% endif %}
+                        </span>
+                        <span class="text-muted">{{ order.order_time|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </button>
+            </h2>
+            <div id="collapse{{ order.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ order.id }}" data-bs-parent="#orderAccordion">
+                <div class="accordion-body">
+                    <div class="order-details mb-4">
+                        <p class="mb-2"><strong>สถานะ:</strong> 
+                            <span class="badge status-{{ order.status }}" 
+                                  style="{% if order.status == 'completed' %}opacity: 1;{% else %}opacity: 0.9;{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </p>
+                        <p class="mb-2"><strong>
+                            {% if order.status == 'completed' and order.delivery and order.delivery.delivery_time %}
+                            เวลารับสินค้า:
+                            {% else %}
+                            เวลาที่คาดว่าจะได้รับ:
+                            {% endif %}
+                        </strong>
+                            {% if order.status == 'completed' and order.delivery and order.delivery.delivery_time %}
+                            {{ order.delivery.delivery_time|date:"H:i" }} น.
+                            {% else %}
+                            {% if order.estimated_time %}
+                            {{ order.order_time|date:"H:i" }} - {{ order.estimated_time|date:"H:i" }} น.
+                            {% else %}
+                            ไม่ระบุ
+                            {% endif %}
+                            {% endif %}
+                        </p>
+                        <p class="mb-2"><strong>ช่องทางชำระเงิน:</strong> {{ order.get_payment_method_display }}</p>
+                        <p class="mb-2"><strong>ที่อยู่จัดส่ง:</strong> 
+                            {% if order.delivery_address %}
+                            {{ order.delivery_address.label }} - {{ order.delivery_address.subdistrict }}, 
+                            {{ order.delivery_address.district }}, {{ order.delivery_address.province }} 
+                            {{ order.delivery_address.postal_code }}
+                            {% else %}
+                            ไม่มีข้อมูลที่อยู่
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <h6 class="mt-4 mb-3 fw-bold">รายการสั่งซื้อ</h6>
+                    <div class="row g-3">
+                        {% for item in order.items.all %}
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm store-card">
+                                <div class="card-body">
+                                    <p class="fw-bold mb-2">{{ item.store.name }}</p>
+                                    <p class="mb-1">จำนวน: {{ item.quantity }}</p>
+                                    <p class="mb-1">ราคา: {{ item.price|floatformat:0 }} บาท</p>
+                                    <p class="mb-1">รวม: {{ item.total_price|floatformat:0 }} บาท</p>
+                                    {% if item.note %}
+                                    <p class="mb-0 text-muted">โน้ต: {{ item.note }}</p>
+                                    {% endif %}
+                                    {% if order.status == 'completed' %}
+                                    {% if item.has_reviewed %}
+                                    <p class="mt-3 mb-0 text-success">รีวิวแล้ว: {{ item.review_rating }}/5 ดาว</p>
+                                    {% else %}
+                                    <button class="btn btn-imsuk btn-sm mt-3 review-btn" data-bs-toggle="modal" data-bs-target="#reviewModal{{ item.id }}" aria-label="รีวิวร้านค้า">รีวิวร้านค้า</button>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% if order.status == 'completed' and not item.has_reviewed %}
+                        <div class="modal fade" id="reviewModal{{ item.id }}" tabindex="-1" aria-labelledby="reviewModalLabel{{ item.id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="reviewModalLabel{{ item.id }}">รีวิวร้านค้า: {{ item.store.name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="mb-3">ให้คะแนนร้านค้า:</p>
+                                        <div class="star-rating" data-store-id="{{ item.store.id }}">
+                                            {% for i in "54321" %}
+                                            <input type="radio" name="rating{{ item.id }}" id="star{{ item.id }}-{{ i }}" value="{{ i }}" class="star-radio">
+                                            <label for="star{{ item.id }}-{{ i }}" class="star">★</label>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                        <button type="button" class="btn btn-imsuk submit-review" data-store-id="{{ item.store.id }}">ส่งรีวิว</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <div class="order-summary mt-4">
+                        <p class="mb-2"><strong>ค่าสินค้า:</strong> {{ order.total_price|floatformat:0 }} บาท</p>
+                        <p class="mb-2"><strong>ค่าส่ง:</strong> {{ order.shipping_fee|floatformat:0 }} บาท</p>
+                        <p class="mb-2 fw-bold"><strong>ยอดรวม:</strong> {{ order.total_with_shipping|floatformat:0 }} บาท</p>
+                    </div>
+
+                    <div class="text-end mt-4">
+                        <button class="btn btn-outline-danger btn-sm delete-order" data-order-id="{{ order.id|stringformat:'s' }}" aria-label="ลบคำสั่งซื้อ">ลบคำสั่งซื้อ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5 animate__animated animate__fadeIn">
+        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+        <p class="text-muted">คุณยังไม่มีคำสั่งซื้อ</p>
+        <a href="{% url 'store_list' %}" class="btn btn-imsuk">ไปที่ร้านค้า</a>
+    </div>
+    {% endif %}
+</div>
 
 <script>
-// Utility function to get CSRF token
 function getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || 
            document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || 
@@ -346,42 +352,33 @@ function getCsrfToken() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing scripts');
-
     const toastEl = document.getElementById('orderToast');
     const toast = new bootstrap.Toast(toastEl, { delay: 2000 });
 
     {% if messages %}
     {% for message in messages %}
-        {% if message != "ลบคำสั่งซื้อเรียบร้อยแล้ว" %}
-        toastEl.querySelector('.toast-body').textContent = "{{ message }}";
-        toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning');
-        toastEl.classList.add('bg-imsuk');
-        toast.show();
-        {% endif %}
+    toastEl.querySelector('.toast-body').textContent = "{{ message }}";
+    toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+    toastEl.classList.add('bg-imsuk');
+    toast.show();
     {% endfor %}
     {% endif %}
 
     function checkOrderStatus() {
         document.querySelectorAll('.accordion-item').forEach(item => {
             const estimatedTime = new Date(item.dataset.estimatedTime);
-            const now = new Date();
             const orderId = item.dataset.orderId;
 
-            if (isNaN(estimatedTime.getTime())) {
-                console.error('Invalid estimated time for order:', orderId);
-                return;
-            }
+            if (isNaN(estimatedTime.getTime()) || item.classList.contains('completed-accordion')) return;
 
-            if (now >= estimatedTime && !item.classList.contains('completed-accordion')) {
+            if (new Date() >= estimatedTime) {
                 fetch(`/order/update_status/${orderId}/`, {
                     method: 'POST',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRFToken': getCsrfToken(),
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status: 'completed' })
+                    }
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -391,26 +388,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         const statusBox = item.querySelector('.status-box');
                         const badge = item.querySelector('.badge');
                         if (statusBox) {
-                            statusBox.classList.remove('status-pending', 'status-processing', 'status-shipped', 'status-confirmed');
+                            statusBox.classList.remove('status-pending', 'status-confirmed', 'status-out_for_delivery');
                             statusBox.classList.add('status-completed');
                             statusBox.textContent = 'สำเร็จ';
                         }
                         if (badge) {
-                            badge.classList.remove('status-pending', 'status-processing', 'status-shipped', 'status-confirmed');
+                            badge.classList.remove('status-pending', 'status-confirmed', 'status-out_for_delivery');
                             badge.classList.add('status-completed');
                             badge.textContent = 'สำเร็จ';
                         }
-                        toastEl.querySelector('.toast-body').textContent = `คำสั่งซื้อ ${orderId} สำเร็จแล้ว`;
+                        toastEl.querySelector('.toast-body').textContent = `คำสั่งซื้อ ${orderId.slice(0, 8)} สำเร็จ`;
                         toastEl.classList.add('bg-success');
                         toast.show();
                         setTimeout(() => location.reload(), 1000);
-                    } else {
-                        console.error('Failed to update status:', data.message);
                     }
                 })
-                .catch(error => {
-                    console.error('Error updating status:', error);
-                });
+                .catch(error => console.error('Status update error:', error));
             }
         });
     }
@@ -418,38 +411,13 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(checkOrderStatus, 10000);
     checkOrderStatus();
 
-    // Review button click handler
-    document.querySelectorAll('.review-btn').forEach(button => {
+    document.querySelectorAll('.submit-review').forEach(button => {
         button.addEventListener('click', function() {
-            console.log('Review button clicked, target:', this.dataset.bsTarget);
-            const modal = document.querySelector(this.dataset.bsTarget);
-            if (modal) {
-                const bootstrapModal = new bootstrap.Modal(modal);
-                bootstrapModal.show();
-            } else {
-                console.error('Modal not found for target:', this.dataset.bsTarget);
-            }
-        });
-    });
+            const modal = this.closest('.modal');
+            const storeId = this.getAttribute('data-store-id');
+            const rating = modal.querySelector('.star-radio:checked')?.value;
 
-    // Star rating and submit review handler
-    document.querySelectorAll('.star-rating').forEach(ratingContainer => {
-        const radioInputs = ratingContainer.querySelectorAll('.star-radio');
-        const submitButton = ratingContainer.closest('.modal').querySelector('.submit-review');
-
-        radioInputs.forEach(radio => {
-            radio.addEventListener('change', function() {
-                console.log('Star selected:', this.value);
-            });
-        });
-
-        submitButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Submit review clicked');
-            const selectedRating = ratingContainer.querySelector('.star-radio:checked')?.value;
-            console.log('Selected rating:', selectedRating);
-
-            if (!selectedRating) {
+            if (!rating) {
                 toastEl.querySelector('.toast-body').textContent = 'กรุณาเลือกคะแนน';
                 toastEl.classList.remove('bg-success', 'bg-imsuk');
                 toastEl.classList.add('bg-danger');
@@ -457,90 +425,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const storeId = this.getAttribute('data-store-id');
-            console.log('Store ID:', storeId);
             const formData = new FormData();
             formData.append('store_id', storeId);
-            formData.append('rating', selectedRating);
+            formData.append('rating', rating);
             formData.append('csrfmiddlewaretoken', getCsrfToken());
 
             fetch("{% url 'submit_review' %}", {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(response => {
-                console.log('Submit review response status:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Submit review response data:', data);
                 toastEl.querySelector('.toast-body').textContent = data.message;
-                toastEl.classList.remove('bg-imsuk', 'bg-danger');
                 toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
                 toast.show();
                 if (data.success) {
-                    const modal = ratingContainer.closest('.modal');
-                    const bootstrapModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
-                    bootstrapModal.hide();
-                    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
-                    document.body.classList.remove('modal-open');
-                    document.body.style = '';
-                    radioInputs.forEach(radio => radio.checked = false);
+                    bootstrap.Modal.getInstance(modal).hide();
                     setTimeout(() => location.reload(), 1000);
                 }
             })
             .catch(error => {
-                console.error('Error submitting review:', error);
-                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการส่งรีวิว';
-                toastEl.classList.remove('bg-imsuk', 'bg-success');
-                toastEl.classList.add('bg-danger');
+                console.error('Review error:', error);
+                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด';
                 toast.show();
             });
         });
     });
 
     document.querySelectorAll('.delete-order').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อนี้?')) return;
+        button.addEventListener('click', function() {
+            if (!confirm('แน่ใจหรือไม่ว่าต้องการลบคำสั่งซื้อนี้?')) return;
 
-            const orderId = this.getAttribute('data-order-id');
+            const orderId = this.dataset.orderId;
             const formData = new FormData();
             formData.append('csrfmiddlewaretoken', getCsrfToken());
 
             fetch(`/order/delete/${orderId}/`, {
                 method: 'POST',
                 body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
             .then(response => response.json())
             .then(data => {
+                toastEl.querySelector('.toast-body').textContent = data.message;
+                toastEl.classList.add(data.success ? 'bg-success' : 'bg-danger');
+                toast.show();
                 if (data.success) {
-                    const accordionItem = button.closest('.accordion-item');
-                    accordionItem.classList.add('animate__animated', 'animate__fadeOut');
-                    setTimeout(() => {
-                        accordionItem.remove();
-                        if (!document.querySelector('.accordion-item')) {
-                            location.reload();
-                        }
-                    }, 500);
-                } else {
-                    toastEl.querySelector('.toast-body').textContent = data.message;
-                    toastEl.classList.remove('bg-success', 'bg-imsuk');
-                    toastEl.classList.add('bg-danger');
-                    toast.show();
+                    button.closest('.accordion-item').remove();
+                    if (!document.querySelector('.accordion-item')) location.reload();
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาดในการลบคำสั่งซื้อ';
-                toastEl.classList.remove('bg-success', 'bg-imsuk');
-                toastEl.classList.add('bg-danger');
+                console.error('Delete error:', error);
+                toastEl.querySelector('.toast-body').textContent = 'เกิดข้อผิดพลาด';
                 toast.show();
             });
         });

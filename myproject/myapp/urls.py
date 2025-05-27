@@ -21,4 +21,5 @@ urlpatterns = [
     path('order/update_status/<uuid:order_id>/', views.update_order_status, name='update_order_status'),
     path('review/submit/', views.submit_review, name='submit_review'),
     path('address/<uuid:address_id>/', views.get_address, name='get_address'),
+    path('api/address/<uuid:address_id>/delete/', views.delete_address, name='delete_address'),
 ]

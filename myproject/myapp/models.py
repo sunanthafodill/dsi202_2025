@@ -191,6 +191,13 @@ class Order(models.Model):
         verbose_name_plural = "คำสั่งซื้อ"
         indexes = [models.Index(fields=['buyer', 'status', 'order_time'])]
 
+    def save(self, *args, **kwargs):
+        if not self.estimated_time and self.order_time:
+            import random
+            delta = timezone.timedelta(minutes=random.randint(35, 50))
+            self.estimated_time = self.order_time + delta
+        super().save(*args, **kwargs)
+
 class OrderItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')

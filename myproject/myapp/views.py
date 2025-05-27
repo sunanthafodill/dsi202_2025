@@ -635,47 +635,109 @@ def profile_settings(request):
 
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
         if form_type == 'profile':
             form = ProfileForm(request.POST, instance=profile)
             if form.is_valid():
                 form.save()
-                messages.success(request, 'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว')
+                message = 'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว'
+                if is_ajax:
+                    return JsonResponse({'success': True, 'message': message})
+                messages.success(request, message)
             else:
-                messages.error(request, 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลส่วนตัว')
+                message = 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลส่วนตัว'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': message}, status=400)
+                messages.error(request, message)
         elif form_type == 'address':
             form = AddressForm(request.POST)
             if form.is_valid():
                 address = form.save(commit=False)
                 address.user = request.user
                 address.save()
-                messages.success(request, 'เพิ่มที่อยู่เรียบร้อยแล้ว')
+                message = 'เพิ่มที่อยู่เรียบร้อยแล้ว'
+                if is_ajax:
+                    return JsonResponse({'success': True, 'message': message})
+                messages.success(request, message)
             else:
-                messages.error(request, 'เกิดข้อผิดพลาดในการเพิ่มที่อยู่')
+                message = 'เกิดข้อผิดพลาดในการเพิ่มที่อยู่'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': message}, status=400)
+                messages.error(request, message)
+        elif form_type == 'edit_address':
+            address_id = request.POST.get('address_id')
+            try:
+                address = Address.objects.get(id=address_id, user=request.user)
+                form = AddressForm(request.POST, instance=address)
+                if form.is_valid():
+                    form.save()
+                    message = 'แก้ไขที่อยู่เรียบร้อยแล้ว'
+                    if is_ajax:
+                        return JsonResponse({'success': True, 'message': message})
+                    messages.success(request, message)
+                else:
+                    message = 'เกิดข้อผิดพลาดในการแก้ไขที่อยู่'
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'error': message}, status=400)
+                    messages.error(request, message)
+            except Address.DoesNotExist:
+                message = 'ไม่พบที่อยู่ที่ต้องการแก้ไข'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': message}, status=404)
+                messages.error(request, message)
         elif form_type == 'allergy':
             form = AllergyForm(request.POST)
             if form.is_valid():
                 allergy = form.save(commit=False)
                 allergy.user = request.user
                 allergy.save()
-                messages.success(request, 'เพิ่มสารก่อภูมิแพ้เรียบร้อย')
+                message = 'เพิ่มสารก่อภูมิแพ้เรียบร้อย'
+                if is_ajax:
+                    return JsonResponse({'success': True, 'message': message})
+                messages.success(request, message)
             else:
-                messages.error(request, 'เกิดข้อผิดพลาดในการเพิ่มสารก่อภูมิแพ้')
+                message = 'เกิดข้อผิดพลาดในการเพิ่มสารก่อภูมิแพ้'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': message}, status=400)
+                messages.error(request, message)
         elif form_type == 'delete_address':
             address_id = request.POST.get('address_id')
             try:
                 address = Address.objects.get(id=address_id, user=request.user)
-                address.delete()
-                messages.success(request, 'ลบที่อยู่เรียบร้อย')
+                if address.is_default and Address.objects.filter(user=request.user).count() > 1:
+                    message = 'ไม่สามารถลบที่อยู่เริ่มต้นได้ กรุณาเลือกที่อยู่อื่นเป็นเริ่มต้นก่อน'
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'error': message}, status=400)
+                    messages.error(request, message)
+                else:
+                    address.delete()
+                    message = 'ลบที่อยู่เรียบร้อย'
+                    if is_ajax:
+                        return JsonResponse({'success': True, 'message': message})
+                    messages.success(request, message)
             except Address.DoesNotExist:
-                messages.error(request, 'ไม่พบที่อยู่ที่ต้องการลบ')
+                message = 'ไม่พบที่อยู่ที่ต้องการลบ'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': message}, status=404)
+                messages.error(request, message)
         elif form_type == 'delete_allergy':
             allergy_id = request.POST.get('allergy_id')
             try:
                 allergy = Allergy.objects.get(id=allergy_id, user=request.user)
                 allergy.delete()
-                messages.success(request, 'ลบสารก่อภูมิแพ้เรียบร้อย')
+                message = 'ลบสารก่อภูมิแพ้เรียบร้อย'
+                if is_ajax:
+                    return JsonResponse({'success': True, 'message': message})
+                messages.success(request, message)
             except Allergy.DoesNotExist:
-                messages.error(request, 'ไม่พบสารก่อภูมิแพ้ที่ต้องการลบ')
+                message = 'ไม่พบสารก่อภูมิแพ้ที่ต้องการลบ'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': message}, status=404)
+                messages.error(request, message)
+
+        if is_ajax:
+            return JsonResponse({'success': False, 'error': 'Invalid form type'}, status=400)
         return redirect('profile_settings')
 
     address_form = AddressForm()
@@ -732,6 +794,15 @@ def update_order_status(request, order_id):
         order = Order.objects.get(id=order_id)
         order.status = 'completed'
         order.save()
+        # อัปเดต Delivery
+        delivery, created = Delivery.objects.get_or_create(
+            order=order,
+            defaults={'rider_id': 'auto', 'status': 'completed', 'delivery_time': timezone.now()}
+        )
+        if not created and delivery.status != 'completed':
+            delivery.status = 'completed'
+            delivery.delivery_time = timezone.now()
+            delivery.save()
         return JsonResponse({'success': True})
     except Order.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'ไม่พบคำสั่งซื้อ'}, status=404)
@@ -748,51 +819,43 @@ def submit_review(request):
         rating = int(rating)
         if not 1 <= rating <= 5:
             message = 'กรุณาให้คะแนนระหว่าง 1-5'
-            if is_ajax:
-                return JsonResponse({'success': False, 'message': message})
-            messages.error(request, message)
-            return redirect('store_detail', pk=store_id)
+            return JsonResponse({'success': False, 'message': message}) if is_ajax else redirect('order_history')
         
         store = get_object_or_404(Store, id=store_id)
         
         # ตรวจสอบว่า user เคยซื้อจากร้านนี้
-        has_purchased = Order.objects.filter(
-            buyer=request.user,
-            items__store=store
-        ).exists()
-        if not has_purchased:
-            message = 'คุณต้องซื้อจากร้านนี้ก่อนจึงจะรีวิวได้'
-            if is_ajax:
-                return JsonResponse({'success': False, 'message': message})
-            messages.error(request, message)
-            return redirect('store_detail', pk=store_id)
+        order_item = OrderItem.objects.filter(
+            order__buyer=request.user,
+            store=store,
+            order__status='completed',
+            has_reviewed=False
+        ).first()
+        if not order_item:
+            message = 'คุณต้องซื้อและรับสินค้าจากร้านนี้ก่อนจึงจะรีวิวได้'
+            return JsonResponse({'success': False, 'message': message}) if is_ajax else redirect('order_history')
         
         # ตรวจสอบรีวิวซ้ำ
         if Review.objects.filter(user=request.user, store=store).exists():
             message = 'คุณรีวิวร้านนี้แล้ว'
-            if is_ajax:
-                return JsonResponse({'success': False, 'message': message})
-            messages.error(request, message)
-            return redirect('store_detail', pk=store_id)
+            return JsonResponse({'success': False, 'message': message}) if is_ajax else redirect('order_history')
         
+        # สร้าง Review และอัปเดต OrderItem
         Review.objects.create(
             user=request.user,
             store=store,
             rating=rating,
             comment=comment
         )
+        order_item.has_reviewed = True
+        order_item.review_rating = rating
+        order_item.save()
+        
         message = 'รีวิวสำเร็จ'
-        if is_ajax:
-            return JsonResponse({'success': True, 'message': message})
-        messages.success(request, message)
-        return redirect('store_detail', pk=store_id)
+        return JsonResponse({'success': True, 'message': message}) if is_ajax else redirect('order_history')
     
     except (ValueError, Store.DoesNotExist) as e:
         message = f'เกิดข้อผิดพลาด: {str(e)}'
-        if is_ajax:
-            return JsonResponse({'success': False, 'message': message})
-        messages.error(request, message)
-        return redirect('store_detail', pk=store_id)
+        return JsonResponse({'success': False, 'message': message}) if is_ajax else redirect('order_history')
 
 def search_suggestions(request):
     query = request.GET.get('search', '').strip()
@@ -826,3 +889,26 @@ def get_address(request, address_id):
         'phone_number': str(address.phone_number),
         'is_default': address.is_default,
     })
+
+@csrf_exempt
+@login_required
+def delete_address(request, address_id):
+    if request.method == 'POST':
+        try:
+            address = Address.objects.get(id=address_id, user=request.user)
+            if address.is_default and Address.objects.filter(user=request.user).count() > 1:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'ไม่สามารถลบที่อยู่เริ่มต้นได้ กรุณาเลือกที่อยู่อื่นเป็นเริ่มต้นก่อน'
+                }, status=400)
+            address.delete()
+            logger.info(f"Address deleted: id={address_id}, user={request.user}")
+            return JsonResponse({'success': True, 'message': 'ลบที่อยู่สำเร็จ'})
+        except Address.DoesNotExist:
+            logger.error(f"Address not found: id={address_id}, user={request.user}")
+            return JsonResponse({'success': False, 'error': 'ไม่พบที่อยู่'}, status=404)
+        except Exception as e:
+            logger.error(f"Delete address error: {str(e)}, address_id={address_id}, user={request.user}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    logger.warning(f"Invalid method for delete_address: method={request.method}, address_id={address_id}")
+    return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
