@@ -265,11 +265,11 @@ docker-compose exec web python myproject/manage.py createsuperuser
 
 ### การเพิ่มคำอธิบาย Jupyter
 ```markdown
-#### การใช้งาน Jupyter
+การใช้งาน Jupyter
 - Jupyter Notebook มีไว้สำหรับการวิเคราะห์ข้อมูลหรือทดสอบโค้ดในโปรเจกต์
 - เข้าใช้งานได้ที่ `http://localhost:8888` หลังจากรัน `docker-compose up`
 - Token สำหรับเข้าใช้งานจะปรากฏใน log ของ container Jupyter
-
+```
 
 ## **การใช้งาน**
 
